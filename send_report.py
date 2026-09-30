@@ -9,7 +9,7 @@ import pandas as pd
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# GitHub Secrets سے معلومات حاصل کرنا
+# GitHub Secrets
 s_email = os.environ.get('SENDER_EMAIL')
 s_pass = os.environ.get('SENDER_PASS')
 r_email = os.environ.get('RECEIVER_EMAIL')
@@ -22,79 +22,23 @@ def load_db(fp):
 
 port_db = load_db('portfolios_db.json')
 
-# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
 SHARIAH_STOCKS = [
     'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
     'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
     'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
 ]
 
-# KSE-100 اور دیگر ایکٹیو اسٹاکس
 NON_SHARIAH_STOCKS = [
     'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
 ]
 
 if s_email and s_pass and r_email:
     if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
-        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
+        subject = 'PSX Morning Market AI Report'
+        header_title = 'PSX Pre-Opening AI Market Report'
     else:
-        subject = 'جاوید اقبال صاحب، انتہائی معذرت! اب سے کوئی ہندی یا غلط متن نہیں آئے گا، صرف اور صرف خالص اردو زبان اور درست پائتھن کوڈ ہوگا۔
-
-سابقہ ایرر کی اصل وجہ یہ تھی کہ جب آپ کوڈ کاپی کرتے تھے تو کوڈ کے بیچ میں تشریحی متن یا سائٹیشنز غلطی سے کاپی ہو جاتی تھیں جس سے پائتھن کا **Syntax Error** آ جاتا تھا۔
-
-اس مسئلے کو ۱۰۰٪ ختم کرنے کے لیے نیچے **بالکل صاف اور درست اردو کوڈ** دیا جا رہا ہے۔
-
----
-
-### `send_report.py` کا مکمل اردو کوڈ:
-
-اپنے GitHub میں جا کر **`send_report.py`** فائل کو ایڈیٹر میں کھولیں، پرانا تمام مواد سلیکٹ کر کے ڈیلیٹ کریں اور صرف اس باکس کے اندر کا کوڈ پیسٹ کر دیں:
-
-```python
-import json
-import os
-import smtplib
-import datetime
-import requests
-from bs4 import BeautifulSoup
-import yfinance as yf
-import pandas as pd
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-# GitHub Secrets سے معلومات حاصل کرنا
-s_email = os.environ.get('SENDER_EMAIL')
-s_pass = os.environ.get('SENDER_PASS')
-r_email = os.environ.get('RECEIVER_EMAIL')
-
-now_utc_hour = datetime.datetime.utcnow().hour
-is_morning = now_utc_hour < 8
-
-def load_db(fp):
-    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
-
-port_db = load_db('portfolios_db.json')
-
-# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
-SHARIAH_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
-    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
-    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
-]
-
-# KSE-100 اور دیگر ایکٹیو اسٹاکس
-NON_SHARIAH_STOCKS = [
-    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
-]
-
-if s_email and s_pass and r_email:
-    if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
-        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
-    else:
-        subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
-        header_title = '🌆 PSX مارکیٹ کلوزنگ پورٹ فولیو رپورٹ'
+        subject = 'PSX Evening Portfolio & Closing Report'
+        header_title = 'PSX Market Closing Portfolio Report'
 
     body = f"{header_title}\n"
     body += "==================================================\n\n"
@@ -121,46 +65,40 @@ if s_email and s_pass and r_email:
                 latest_vol = volume.iloc[-1]
                 curr_p = close.iloc[-1]
 
-                tag = "🕌 [شریعہ کمپلائنٹ]" if is_shariah else "🏛️ [KSE-100 / جنرل]"
+                tag = "[Shariah Compliant]" if is_shariah else "[KSE-100 / General]"
 
-                # خرید کا موقع (Oversold یا Volume Surge)
                 if latest_rsi <= 38 or (latest_vol > 1.8 * avg_vol and latest_rsi < 60):
-                    buy_list.append(f"• {wsym} {tag} | قیمت: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> 🟢 (خرید کا بہترین موقع / Momentum)")
-                
-                # بیچنے کا موقع (Overbought Zone)
+                    buy_list.append(f"• {wsym} {tag} | Price: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> BUY Signal")
                 elif latest_rsi >= 68:
-                    sell_list.append(f"• {wsym} {tag} | قیمت: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> 🔴 (منافع بک کریں / SELL)")
+                    sell_list.append(f"• {wsym} {tag} | Price: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> SELL Signal")
         except Exception:
             pass
 
-    # 1. خرید والے شیئرز
-    body += "🚀 **خریداری / بڑھوتری کے قوی امکانات والے شیئرز (BUY Signals):**\n\n"
+    body += "BUY Signals / Breakout Opportunities:\n\n"
     if buy_list:
         body += "\n".join(buy_list) + "\n"
     else:
-        body += "• اس وقت کوئی شیئر اوور سولڈ زون میں نہیں ہے۔\n"
+        body += "• No stocks in buy zone currently.\n"
 
     body += "\n--------------------------------------------------\n"
 
-    # 2. مہنگے / بیچنے والے شیئرز
-    body += "⚠️ **اوور باٹ / مہنگے شیئرز (SELL Signals / Profit Booking):**\n\n"
+    body += "SELL Signals / Overbought Alerts:\n\n"
     if sell_list:
         body += "\n".join(sell_list) + "\n"
     else:
-        body += "• اس وقت کوئی شیئر انتہائی مہنگے (Overbought) زون میں نہیں ہے۔\n"
+        body += "• No stocks in overbought zone currently.\n"
 
     body += "\n==================================================\n"
 
-    # 3. پورٹ فولیو کا جائزہ
     for user, u_port in port_db.items():
         if u_port:
-            body += f"\n📂 **{user.upper()} کا ذاتی پورٹ فولیو:**\n\n"
+            body += f"\nPortfolio Status ({user.upper()}):\n\n"
             tot_cost = 0
             tot_val = 0
 
             for sym, pinfo in u_port.items():
                 try:
-                    p_url = f'[https://dps.psx.com.pk/company/](https://dps.psx.com.pk/company/){sym}'
+                    p_url = f'https://dps.psx.com.pk/company/{sym}'
                     res = requests.get(p_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5).text
                     soup = BeautifulSoup(res, 'html.parser')
                     p_div = soup.find('div', {'class': 'quote__close'})
@@ -179,21 +117,21 @@ if s_email and s_pass and r_email:
                 tot_val += v_tot
                 pnl = v_tot - c_tot
 
-                status = 'ہولڈنگ (HOLDING)'
+                status = 'HOLDING'
                 if price >= t_sell:
-                    status = '🎯 ٹارگٹ مکمل (بیچ دیں)'
+                    status = 'TARGET REACHED'
                 elif price <= s_loss:
-                    status = '⚠️ اسٹاپ لاس الرٹ'
+                    status = 'STOP LOSS ALERT'
 
-                sharia_tag = " 🕌" if sym in SHARIAH_STOCKS else ""
-                body += f"• {sym}{sharia_tag}: خرید Rs.{b_price:,.2f} | لائیو Rs.{price:,.2f} | نفع/نقصان: Rs.{pnl:+,.2f} [{status}]\n"
+                sharia_tag = " [Shariah]" if sym in SHARIAH_STOCKS else ""
+                body += f"• {sym}{sharia_tag}: Buy Rs.{b_price:,.2f} | Live Rs.{price:,.2f} | P&L: Rs.{pnl:+,.2f} [{status}]\n"
 
             tot_pnl = tot_val - tot_cost
-            body += f"\n💰 کل سرمایہ کاری: Rs.{tot_cost:,.2f} | موجودہ مالیت: Rs.{tot_val:,.2f}\n"
-            body += f"📈 کل نفع / نقصان: Rs.{tot_pnl:+,.2f}\n"
+            body += f"\nTotal Investment: Rs.{tot_cost:,.2f} | Current Value: Rs.{tot_val:,.2f}\n"
+            body += f"Total P&L: Rs.{tot_pnl:+,.2f}\n"
 
     body += "\n==================================================\n"
-    body += "یہ رپورٹ PSX AI کلاؤڈ سسٹم سے خودکار طریقے سے بھیجی گئی ہے۔"
+    body += "Report generated automatically by PSX AI Cloud System."
 
     try:
         msg = MIMEMultipart()
@@ -206,6 +144,6 @@ if s_email and s_pass and r_email:
         server.login(s_email, s_pass)
         server.send_message(msg)
         server.quit()
-        print('ای میل کامیابی سے بھیج دی گئی ہے!')
+        print('Email sent successfully!')
     except Exception as e:
-        print('ای میل بھیجنے میں غلطی:', e)
+        print('Email failed:', e)
