@@ -9,7 +9,7 @@ import pandas as pd
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# گٹ ہب سیکریٹس سے ای میل معلومات حاصل کرنا
+# GitHub Secrets سے معلومات حاصل کرنا
 s_email = os.environ.get('SENDER_EMAIL')
 s_pass = os.environ.get('SENDER_PASS')
 r_email = os.environ.get('RECEIVER_EMAIL')
@@ -22,10 +22,107 @@ def load_db(fp):
 
 port_db = load_db('portfolios_db.json')
 
+# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
+SHARIAH_STOCKS = [
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
+    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
+    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
+]
+
+# KSE-100 اور دیگر ایکٹیو اسٹاکس
+NON_SHARIAH_STOCKS = [
+    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
+]
+
 if s_email and s_pass and r_email:
     if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (بڑھوتری والے شیئرز)'
-        header_title = '🌅 PSX صبح کی پری اوپننگ مارکیٹ رپورٹ'
+        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
+        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
+    else:
+        subject = '```python
+import json
+import os
+import smtplib
+import datetime
+import requests
+from bs4 import BeautifulSoup
+import yfinance as yf
+import pandas as pd
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# GitHub Secrets سے معلومات حاصل کرنا
+s_email = os.environ.get('SENDER_EMAIL')
+s_pass = os.environ.get('SENDER_PASS')
+r_email = os.environ.get('RECEIVER_EMAIL')
+
+now_utc_hour = datetime.datetime.utcnow().hour
+is_morning = now_utc_hour < 8
+
+def load_db(fp):
+    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
+
+port_db = load_db('portfolios_db.json')
+
+# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
+SHARIAH_STOCKS = [
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
+    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
+    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
+]
+
+# KSE-100 اور دیگر ایکٹیو اسٹاکس
+NON_SHARIAH_STOCKS = [
+    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
+]
+
+if s_email and s_pass and r_email:
+    if is_morning:
+        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
+        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
+    else:
+        subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
+        header_title = '```python
+import json
+import os
+import smtplib
+import datetime
+import requests
+from bs4 import BeautifulSoup
+import yfinance as yf
+import pandas as pd
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# GitHub Secrets سے معلومات حاصل کرنا
+s_email = os.environ.get('SENDER_EMAIL')
+s_pass = os.environ.get('SENDER_PASS')
+r_email = os.environ.get('RECEIVER_EMAIL')
+
+now_utc_hour = datetime.datetime.utcnow().hour
+is_morning = now_utc_hour < 8
+
+def load_db(fp):
+    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
+
+port_db = load_db('portfolios_db.json')
+
+# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
+SHARIAH_STOCKS = [
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
+    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
+    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
+]
+
+# KSE-100 اور دیگر ایکٹیو اسٹاکس
+NON_SHARIAH_STOCKS = [
+    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
+]
+
+if s_email and s_pass and r_email:
+    if is_morning:
+        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
+        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
     else:
         subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
         header_title = '🌆 PSX مارکیٹ کلوزنگ پورٹ فولیو رپورٹ'
@@ -33,15 +130,12 @@ if s_email and s_pass and r_email:
     body = f"{header_title}\n"
     body += "==================================================\n\n"
 
-    if is_morning:
-        body += "🚀 **مارکیٹ کھلنے پر جن شیئرز میں بڑھوتری (Upward Breakout) کے چانسز ہیں:**\n\n"
-    else:
-        body += "🔍 **مارکیٹ کلوزنگ پر سب سے سستے (Oversold Bargain) شیئرز:**\n\n"
+    all_stocks = [(s, True) for s in SHARIAH_STOCKS] + [(s, False) for s in NON_SHARIAH_STOCKS]
 
-    watch_stocks = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'MEBL', 'SYS', 'MLCF', 'DGKC', 'POL', 'TRG', 'PAEL']
-    growth_found = False
+    buy_list = []
+    sell_list = []
 
-    for wsym in watch_stocks:
+    for wsym, is_shariah in all_stocks:
         try:
             df = yf.download(f'{wsym}.KA', period='1mo', interval='1d', progress=False)
             if not df.empty:
@@ -56,22 +150,42 @@ if s_email and s_pass and r_email:
 
                 avg_vol = volume.rolling(10).mean().iloc[-1]
                 latest_vol = volume.iloc[-1]
+                curr_p = close.iloc[-1]
 
-                if latest_rsi <= 38 or (latest_vol > 1.5 * avg_vol and latest_rsi < 60):
-                    growth_found = True
-                    curr_p = close.iloc[-1]
-                    body += f"• {wsym} | قیمت: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> (خرید زون / بڑھوتری چانس)\n"
+                tag = "🕌 [شریعہ کمپلائنٹ]" if is_shariah else "🏛️ [KSE-100 / جنرل]"
+
+                # خرید کا موقع (Oversold یا Volume Surge)
+                if latest_rsi <= 38 or (latest_vol > 1.8 * avg_vol and latest_rsi < 60):
+                    buy_list.append(f"• {wsym} {tag} | قیمت: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> 🟢 (خرید کا بہترین موقع / Momentum)")
+                
+                # بیچنے کا موقع (Overbought Zone)
+                elif latest_rsi >= 68:
+                    sell_list.append(f"• {wsym} {tag} | قیمت: Rs.{curr_p:,.2f} | RSI: {latest_rsi} --> 🔴 (منافع بک کریں / SELL)")
         except Exception:
             pass
 
-    if not growth_found:
-        body += "• تمام شیئرز فی الحال نارمل رینج میں ہیں۔\n"
+    # 1. خرید والے شیئرز
+    body += "🚀 **خریداری / بڑھوتری کے قوی امکانات والے شیئرز (BUY Signals):**\n\n"
+    if buy_list:
+        body += "\n".join(buy_list) + "\n"
+    else:
+        body += "• اس وقت کوئی شیئر اوور سولڈ زون میں نہیں ہے۔\n"
 
     body += "\n--------------------------------------------------\n"
 
+    # 2. مہنگے / بیچنے والے شیئرز
+    body += "⚠️ **اوور باٹ / مہنگے شیئرز (SELL Signals / Profit Booking):**\n\n"
+    if sell_list:
+        body += "\n".join(sell_list) + "\n"
+    else:
+        body += "• اس وقت کوئی شیئر انتہائی مہنگے (Overbought) زون میں نہیں ہے۔\n"
+
+    body += "\n==================================================\n"
+
+    # 3. پورٹ فولیو کا جائزہ
     for user, u_port in port_db.items():
         if u_port:
-            body += f"📂 **{user.upper()} کا ذاتی پورٹ فولیو:**\n\n"
+            body += f"\n📂 **{user.upper()} کا ذاتی پورٹ فولیو:**\n\n"
             tot_cost = 0
             tot_val = 0
 
@@ -100,9 +214,10 @@ if s_email and s_pass and r_email:
                 if price >= t_sell:
                     status = '🎯 ٹارگٹ مکمل (بیچ دیں)'
                 elif price <= s_loss:
-                    status = '⚠️ اسٹاپ لاس الرٹ (نقصان کا خدشہ)'
+                    status = '⚠️️ اسٹاپ لاس الرٹ'
 
-                body += f"• {sym}: خرید Rs.{b_price:,.2f} | لائیو Rs.{price:,.2f} | نفع/نقصان: Rs.{pnl:+,.2f} [{status}]\n"
+                sharia_tag = " 🕌" if sym in SHARIAH_STOCKS else ""
+                body += f"• {sym}{sharia_tag}: خرید Rs.{b_price:,.2f} | لائیو Rs.{price:,.2f} | نفع/نقصان: Rs.{pnl:+,.2f} [{status}]\n"
 
             tot_pnl = tot_val - tot_cost
             body += f"\n💰 کل سرمایہ کاری: Rs.{tot_cost:,.2f} | موجودہ مالیت: Rs.{tot_val:,.2f}\n"
