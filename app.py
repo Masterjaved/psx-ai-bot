@@ -2,17 +2,14 @@ import streamlit as st
 import pandas as pd
 import json
 import os
-import smtplib
 import requests
 from bs4 import BeautifulSoup
 import yfinance as yf
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 st.set_page_config(
-    page_title="PSX Automated AI Portfolio Portal",
+    page_title="PSX AI Value Investing & Portfolio Portal",
     page_icon="🏛️",
     layout="wide"
 )
@@ -38,14 +35,19 @@ st.markdown("""
         margin-bottom: 25px;
         text-align: center;
     }
-    .psx-header h1 { color: #ffffff; font-size: 2.5rem; margin: 0; font-weight: bold; }
-    .psx-header p { color: #FFD700; margin-top: 8px; font-weight: bold; font-size: 1.2rem; }
+    .psx-header h1 { color: #ffffff; font-size: 2.3rem; margin: 0; font-weight: bold; }
+    .psx-header p { color: #FFD700; margin-top: 8px; font-weight: bold; font-size: 1.1rem; }
     </style>
 """, unsafe_allow_html=True)
 
 USERS_DB = "users_db.json"
 PORTFOLIO_DB = "portfolios_db.json"
-ALERTS_DB = "alerts_db.json"
+
+SHARIAH_STOCKS = [
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
+    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
+    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
+]
 
 def load_db(file_path):
     if os.path.exists(file_path):
@@ -93,50 +95,68 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-def render_candlestick_chart(symbol, period="6mo", interval="1d"):
-    ticker_symbol = symbol.upper().strip()
-    yf_ticker = f"{ticker_symbol}.KA" if not ticker_symbol.endswith(".KA") else ticker_symbol
+def render_advanced_chart(symbol):
+    ticker = f"{symbol.upper().strip()}.KA"
     try:
-        data = yf.download(tickers=yf_ticker, period=period, interval=interval, progress=False)
+        data = yf.download(tickers=ticker, period="6mo", interval="1d", progress=False)
         if not data.empty:
-            if isinstance(data.columns, pd.MultiIndex):
-                df_chart = pd.DataFrame({
-                    'Open': data['Open'].iloc[:, 0],
-                    'High': data['High'].iloc[:, 0],
-                    'Low': data['Low'].iloc[:, 0],
-                    'Close': data['Close'].iloc[:, 0],
-                    'Volume': data['Volume'].iloc[:, 0]
-                }, index=data.index)
-            else:
-                df_chart = data
+            df = pd.DataFrame({
+                'Open': data['Open'].iloc[:, 0] if isinstance(data.columns, pd.MultiIndex) else data['Open'],
+                'High': data['High'].iloc[:, 0] if isinstance(data.columns, pd.MultiIndex) else data['High'],
+                'Low': data['Low'].iloc[:, 0] if isinstance(data.columns, pd.MultiIndex) else data['Low'],
+                'Close': data['Close'].iloc[:, 0] if isinstance(data.columns, pd.MultiIndex) else data['Close'],
+                'Volume': data['Volume'].iloc[:, 0] if isinstance(data.columns, pd.MultiIndex) else data['Volume']
+            }, index=data.index)
 
-            df_chart['MA20'] = df_chart['Close'].rolling(window=20).mean()
-            df_chart['RSI'] = calculate_rsi(df_chart['Close'])
-            latest_rsi = round(df_chart['RSI'].iloc[-1], 2) if not pd.isna(df_chart['RSI'].iloc[-1]) else 50.0
+            # انڈیکیٹرز کا حساب
+            df['MA20'] = df['Close'].rolling(window=20).mean()
+            df['MA200'] = df['Close'].rolling(window=200).mean()
+            df['RSI'] = calculate_rsi(df['Close'])
+            
+            # MACD
+            exp1 = df['Close'].ewm(span=12, adjust=False).mean()
+            exp2 = df['Close'].ewm(span=26, adjust=False).mean()
+            df['MACD'] = exp1 - exp2
+            df['Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
 
-            if latest_rsi <= 35:
-                st.success(f"🟢 **خرید کا سگنل (BUY):** ریٹ مناسب حد میں ہے (RSI: {latest_rsi})")
-            elif latest_rsi >= 68:
-                st.error(f"🔴 **فروخت کا سگنل (SELL):** ریٹ کافی اوپر ہے (RSI: {latest_rsi})")
-            else:
-                st.info(f"🟡 **ہولڈ (HOLD):** مارکیٹ نارمل ہے (RSI: {latest_rsi})")
+            latest_rsi = round(df['RSI'].iloc[-1], 2)
+            latest_close = df['Close'].iloc[-1]
+            latest_macd = df['MACD'].iloc[-1]
+            latest_sig = df['Signal'].iloc[-1]
+
+            # الرٹ میسجز
+            sharia_txt = "🕌 شریعہ کمپلائنٹ (KMI-30)" if symbol.upper() in SHARIAH_STOCKS else "🏛️ جنرل / KSE-100"
+            st.caption(f"اسٹاک کی قسم: **{sharia_txt}**")
+
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if latest_rsi <= 38:
+                    st.success(f"🟢 **RSI خرید کا اشارہ:** سستا زون (RSI: {latest_rsi})")
+                elif latest_rsi >= 68:
+                    st.error(f"🔴 **RSI فروخت کا اشارہ:** اوور باٹ زون (RSI: {latest_rsi})")
+                else:
+                    st.info(f"🟡 **RSI متوازن:** نارمل زون (RSI: {latest_rsi})")
+
+            with col_b:
+                if latest_macd > latest_sig:
+                    st.success("🚀 **MACD تیزی کا اشارہ (Bullish Crossover):** قیمت اوپر جانے کے چانس ہیں")
+                else:
+                    st.warning("⚠️️ **MACD مندی کا اشارہ (Bearish Trend):** محتاط رہیں")
 
             fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08, row_heights=[0.7, 0.3])
-            fig.add_trace(go.Candlestick(
-                x=df_chart.index, open=df_chart['Open'], high=df_chart['High'],
-                low=df_chart['Low'], close=df_chart['Close'], name="قیمت"
-            ), row=1, col=1)
-            fig.add_trace(go.Scatter(x=df_chart.index, y=df_chart['RSI'], name='RSI (14)'), row=2, col=1)
-            fig.update_layout(template="plotly_dark", height=500, showlegend=True)
+            fig.add_trace(go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name="قیمت"), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], name='20 Day MA', line=dict(color='yellow', width=1)), row=1, col=1)
+            fig.add_trace(go.Scatter(x=df.index, y=df['MACD'], name='MACD', line=dict(color='cyan', width=1.5)), row=2, col=1)
+            fig.add_trace(go.Scatter(x=df.index, y=df['Signal'], name='Signal Line', line=dict(color='orange', width=1.5)), row=2, col=1)
+            fig.update_layout(template="plotly_dark", height=550, showlegend=True)
             st.plotly_chart(fig, use_container_width=True)
-    except Exception:
+    except Exception as e:
         st.warning("چارٹ لوڈ کرتے وقت مسئلہ پیش آیا۔")
 
 def auth_system():
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
         st.session_state["username"] = None
-        st.session_state["role"] = None
 
     if not st.session_state["authenticated"]:
         st.markdown("<div class='psx-header'><h1>🏛️ PSX پرسنل AI ویلیو انویسٹنگ پورٹل</h1></div>", unsafe_allow_html=True)
@@ -149,7 +169,6 @@ def auth_system():
                 if u_input in users_data and users_data[u_input]["password"] == p_input:
                     st.session_state["authenticated"] = True
                     st.session_state["username"] = u_input
-                    st.session_state["role"] = users_data[u_input]["role"]
                     st.rerun()
                 else:
                     st.error("❌ غلط لاگ ان معلومات")
@@ -164,30 +183,53 @@ if auth_system():
         st.session_state["authenticated"] = False
         st.rerun()
 
-    tabs = st.tabs(["📊 مارکیٹ جائزہ", "🔍 اسکرینر", "📂 پورٹ فولیو و P&L", "🔔 ای میل سیٹنگز"])
+    tabs = st.tabs(["📊 لائیو مارکیٹ و تکنیکی تجزیہ", "📂 ذاتی پورٹ فولیو مینیجر", "🔔 کلاؤڈ سسٹم الرٹس"])
 
     with tabs[0]:
-        st.subheader("🇵🇰 PSX لائیو مارکیٹ جائزہ")
-        sym = st.text_input("اسٹاک سمبل درج کریں:", value="FFC").upper().strip()
+        st.subheader("🇵🇰 PSX لائیو چارٹ و تکنیکی اشارے (RSI + MACD)")
+        sym = st.text_input("اسٹاک سمبل درج کریں (مثلاً FFC, SYS, PAEL):", value="FFC").upper().strip()
         if sym:
             res = fetch_psx_live_data(sym)
             if res["status"] == "Success":
                 st.metric(f"لائیو قیمت ({sym})", f"Rs. {res['price']:,.2f}")
-            render_candlestick_chart(sym)
+            render_advanced_chart(sym)
 
     with tabs[1]:
-        st.subheader("🔍 مارکیٹ اسکرینر")
-        if st.button("اسکین چلائیں"):
-            st.info("اسکین کا عمل مکمل ہو گیا ہے۔")
+        st.subheader("📂 پورٹ فولیو مینیجر (شیئرز شامل کریں / دیکھیں)")
+        all_ports = load_db(PORTFOLIO_DB)
+        user_port = all_ports.get(curr_user, {})
+
+        with st.expander("➕ نیا شیئر پورٹ فولیو میں شامل کریں", expanded=True):
+            with st.form("add_stock_form"):
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    new_sym = st.text_input("اسٹاک سمبل (مثلاً MLCF)").upper().strip()
+                with col2:
+                    new_price = st.number_input("خریداری کی قیمت (Buy Price)", min_value=1.0, value=50.0)
+                with col3:
+                    new_qty = st.number_input("شیئرز کی تعداد (Quantity)", min_value=1, value=100)
+
+                submit_btn = st.form_submit_button("پورٹ فولیو میں محفوظ کریں")
+                if submit_btn and new_sym:
+                    if curr_user not in all_ports:
+                        all_ports[curr_user] = {}
+                    all_ports[curr_user][new_sym] = {
+                        "Buy Price": new_price,
+                        "Quantity": new_qty,
+                        "Target Sell": round(new_price * 1.15, 2),
+                        "Stop Loss": round(new_price * 0.90, 2)
+                    }
+                    save_db(PORTFOLIO_DB, all_ports)
+                    st.success(f"✅ {new_sym} پورٹ فولیو میں شامل کر دیا گیا ہے!")
+                    st.rerun()
+
+        st.subheader("📋 آپ کے موجودہ شیئرز:")
+        if user_port:
+            for s_name, s_data in user_port.items():
+                st.write(f"• **{s_name}** | خرید قیمت: Rs.{s_data['Buy Price']} | تعداد: {s_data['Quantity']} | ٹارگٹ: Rs.{s_data['Target Sell']}")
+        else:
+            st.info("آپ کے پورٹ فولیو میں فی الحال کوئی شیئر موجود نہیں ہے۔ اوپر والے فارم سے شیئرز شامل کریں۔")
 
     with tabs[2]:
-        st.subheader("📂 ذاتی پورٹ فولیو")
-        port_data = load_db(PORTFOLIO_DB).get(curr_user, {})
-        if port_data:
-            st.json(port_data)
-        else:
-            st.info("پورٹ فولیو فی الحال خالی ہے۔")
-
-    with tabs[3]:
-        st.subheader("🔔 ای میل سیٹنگز")
-        st.success("کلاؤڈ ای میل خودکار نظام فعال ہے۔")
+        st.subheader("🔔 کلاؤڈ آٹومیشن الرٹس")
+        st.success("گٹ ہب ایکشنز (GitHub Actions) کے ذریعے روزانہ صبح 9:00 بجے اور شام 4:30 بجے خودکار رپورٹس ای میل پر بھیجی جا رہی ہیں۔")
