@@ -39,50 +39,13 @@ if s_email and s_pass and r_email:
         subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
         header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
     else:
-        subject = '```python
-import json
-import os
-import smtplib
-import datetime
-import requests
-from bs4 import BeautifulSoup
-import yfinance as yf
-import pandas as pd
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+        subject = 'جاوید اقبال صاحب، تصویر بالکل صاف اور واضح ہے! ایرر مل گیا ہے[cite: 7]۔
 
-# GitHub Secrets سے معلومات حاصل کرنا
-s_email = os.environ.get('SENDER_EMAIL')
-s_pass = os.environ.get('SENDER_PASS')
-r_email = os.environ.get('RECEIVER_EMAIL')
+اصل میں `send_report.py` فائل کو کاپی کرتے وقت لائن 42 کے پاس غلطی سے کوڈ بلاک کا ٹیکسٹ (` ```python `) پیسٹ ہو گیا تھا، جس کی وجہ سے پائتھن کا سنٹیکس ایرر (`SyntaxError: unterminated string literal`) آ رہا ہے[cite: 7]۔
 
-now_utc_hour = datetime.datetime.utcnow().hour
-is_morning = now_utc_hour < 8
+اس ایرر کو ختم کرنے کے لیے اپنی GitHub ریپوزٹری میں جا کر **`send_report.py`** فائل کو ایڈٹ کریں اور اس کا پورا مواد ہٹا کر یہ بالکل صاف کوڈ کاپی کر کے **Commit changes** کر دیں:
 
-def load_db(fp):
-    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
-
-port_db = load_db('portfolios_db.json')
-
-# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
-SHARIAH_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
-    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
-    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
-]
-
-# KSE-100 اور دیگر ایکٹیو اسٹاکس
-NON_SHARIAH_STOCKS = [
-    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
-]
-
-if s_email and s_pass and r_email:
-    if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
-        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
-    else:
-        subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
-        header_title = '```python
+```python
 import json
 import os
 import smtplib
@@ -191,7 +154,7 @@ if s_email and s_pass and r_email:
 
             for sym, pinfo in u_port.items():
                 try:
-                    p_url = f'https://dps.psx.com.pk/company/{sym}'
+                    p_url = f'[https://dps.psx.com.pk/company/](https://dps.psx.com.pk/company/){sym}'
                     res = requests.get(p_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5).text
                     soup = BeautifulSoup(res, 'html.parser')
                     p_div = soup.find('div', {'class': 'quote__close'})
@@ -214,7 +177,7 @@ if s_email and s_pass and r_email:
                 if price >= t_sell:
                     status = '🎯 ٹارگٹ مکمل (بیچ دیں)'
                 elif price <= s_loss:
-                    status = '⚠️️ اسٹاپ لاس الرٹ'
+                    status = '⚠️ اسٹاپ لاس الرٹ'
 
                 sharia_tag = " 🕌" if sym in SHARIAH_STOCKS else ""
                 body += f"• {sym}{sharia_tag}: خرید Rs.{b_price:,.2f} | لائیو Rs.{price:,.2f} | نفع/نقصان: Rs.{pnl:+,.2f} [{status}]\n"
