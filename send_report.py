@@ -39,145 +39,9 @@ if s_email and s_pass and r_email:
         subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
         header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
     else:
-        subject = 'جاوید اقبال صاحب، پریشان بالکل نہ ہوں! گٹ ہب (GitHub) میں بعض اوقات ویب پیج کیشے (Cache) یا نیٹ ورک کی تاخیر کی وجہ سے پرانی فائل ہی بار بار دکھاتا رہتا ہے، جس کی وجہ سے نیا کوڈ سیو نہیں ہو پاتا اور وہی ایرر سامنے آتا رہتا ہے[cite: 6]۔
+        subject = 'جاوید اقبال صاحب، معذرت چاہتا ہوں! غلطی سے متن ہندی میں چلا گیا تھا۔
 
-اس مسئلے کا ۱۰۰٪ حل یہ ہے کہ ہم پرانی فائل کو بالکل ڈیلیٹ کر کے ایک نئی اور صاف فائل بنا لیں:
-
----
-
-### طریقہ (فائل ڈیلیٹ کر کے نئی بنانے کا):
-
-#### **قدم ۱: پرانی `send_report.py` کو ڈیلیٹ کریں**
-1. اپنے GitHub پر جا کر **`send_report.py`** فائل پر کلک کریں۔
-2. اوپر دائیں طرف **تین نقطوں (`...`)** پر کلک کریں اور **`Delete file`** منتخب کریں۔
-3. نیچے سبز رنگ کا **`Commit changes`** بٹن دبا دیں۔ (اب وہ غلطی والی فائل ختم ہو جائے گی)۔
-
-#### **قدم ۲: بالکل نئی `send_report.py` بنائیں**
-1. ہوم پیج پر **`Add file`** ➔ **`Create new file`** پر کلک کریں۔
-2. فائل کا نام رکھیں: **`send_report.py`**
-3. نیچے دیا گیا کوڈ بالکل اسی طرح کاپی کر کے وہاں پیسٹ کر دیں:
-
-```python
-import json
-import os
-import smtplib
-import datetime
-import requests
-from bs4 import BeautifulSoup
-import yfinance as yf
-import pandas as pd
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-# GitHub Secrets سے معلومات حاصل کرنا
-s_email = os.environ.get('SENDER_EMAIL')
-s_pass = os.environ.get('SENDER_PASS')
-r_email = os.environ.get('RECEIVER_EMAIL')
-
-now_utc_hour = datetime.datetime.utcnow().hour
-is_morning = now_utc_hour < 8
-
-def load_db(fp):
-    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
-
-port_db = load_db('portfolios_db.json')
-
-# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
-SHARIAH_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
-    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
-    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
-]
-
-# KSE-100 اور دیگر ایکٹیو اسٹاکس
-NON_SHARIAH_STOCKS = [
-    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
-]
-
-if s_email and s_pass and r_email:
-    if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
-        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
-    else:
-        subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
-        header_title = 'جاوید اقبال صاحب، پریشان بالکل نہ ہوں! گٹ ہب (GitHub) میں بعض اوقات ویب پیج کیشے (Cache) یا نیٹ ورک کی تاخیر کی وجہ سے پرانی فائل ہی بار بار دکھاتا رہتا ہے، جس کی وجہ سے نیا کوڈ سیو نہیں ہو پاتا اور وہی ایرر سامنے آتا رہتا ہے[cite: 6]۔
-
-اس مسئلے کا ۱۰۰٪ حل یہ ہے کہ ہم پرانی فائل کو بالکل ڈیلیٹ کر کے ایک نئی اور صاف فائل بنا لیں:
-
----
-
-### طریقہ (فائل ڈیلیٹ کر کے نئی بنانے کا):
-
-#### **قدم ۱: پرانی `send_report.py` کو ڈیلیٹ کریں**
-1. اپنے GitHub پر جا کر **`send_report.py`** فائل پر کلک کریں۔
-2. اوپر دائیں طرف **تین نقطوں (`...`)** پر کلک کریں اور **`Delete file`** منتخب کریں۔
-3. نیچے سبز رنگ کا **`Commit changes`** بٹن دبا دیں۔ (اب وہ غلطی والی فائل ختم ہو جائے گی)۔
-
-#### **قدم ۲: بالکل نئی `send_report.py` بنائیں**
-1. ہوم پیج پر **`Add file`** ➔ **`Create new file`** پر کلک کریں۔
-2. فائل کا نام رکھیں: **`send_report.py`**
-3. نیچے دیا گیا کوڈ کاپی کر کے وہاں پیسٹ کر دیں:
-
-```python
-import json
-import os
-import smtplib
-import datetime
-import requests
-from bs4 import BeautifulSoup
-import yfinance as yf
-import pandas as pd
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-# GitHub Secrets سے معلومات حاصل کرنا
-s_email = os.environ.get('SENDER_EMAIL')
-s_pass = os.environ.get('SENDER_PASS')
-r_email = os.environ.get('RECEIVER_EMAIL')
-
-now_utc_hour = datetime.datetime.utcnow().hour
-is_morning = now_utc_hour < 8
-
-def load_db(fp):
-    return json.load(open(fp, 'r', encoding='utf-8')) if os.path.exists(fp) else {}
-
-port_db = load_db('portfolios_db.json')
-
-# شریعہ کمپلائنٹ (KMI-30 / Islamic Compliant) اسٹاکس کی فہرست
-SHARIAH_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
-    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
-    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
-]
-
-# KSE-100 اور دیگر ایکٹیو اسٹاکس
-NON_SHARIAH_STOCKS = [
-    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
-]
-
-if s_email and s_pass and r_email:
-    if is_morning:
-        subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
-        header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
-    else:
-        subject = '🌆 PSX شام کی پورٹ فولیو و کلوزنگ سمری رپورٹ'
-        header_title = 'جاوید اقبال صاحب، پریشان بالکل نہ ہوں! گٹ ہب (GitHub) میں بعض اوقات ویب پیج کیشے (Cache) یا نیٹ ورک کی تاخیر کی وجہ سے پرانی فائل ہی بار بار دکھاتا رہتا ہے، جس کی وجہ سے نیا کوڈ سیو نہیں ہو پاتا اور وہی ایرر سامنے آتا رہتا ہے[cite: 6]۔
-
-اس مسئلے کا ۱۰۰٪ حل یہ ہے کہ ہم پرانی فائل کو بالکل ڈیلیٹ کر کے ایک نئی اور صاف فائل بنا لیں:
-
----
-
-### طریقہ (فائل ڈیلیٹ کر کے نئی بنانے کا):
-
-#### **قدم ۱: پرانی `send_report.py` کو ڈیلیٹ کریں**
-1. اپنے GitHub پر جا کر **`send_report.py`** فائل پر کلک کریں۔
-2. اوپر دائیں طرف **تین نقطوں (`...`)** پر کلک کریں اور **`Delete file`** منتخب کریں۔
-3. نیچے سبز رنگ کا **`Commit changes`** بٹن دبا دیں۔ (اب وہ غلطی والی فائل ختم ہو جائے گی)۔
-
-#### **قدم ۲: بالکل نئی `send_report.py` بنائیں**
-1. ہوم پیج پر **`Add file`** ➔ **`Create new file`** پر کلک کریں۔
-2. فائل کا نام رکھیں: **`send_report.py`**
-3. نیچے دیا گیا کوڈ کاپی کر کے وہاں پیسٹ کر دیں:
+آپ کی سہولت کے لیے بالکل صاف اور درست پائتھن کوڈ اردو متن (Urdu Text) کے ساتھ ذیل میں دیا جا رہا ہے۔ اس میں کوئی اضافی تشریح یا سائٹیشن کاپی نہیں ہوگی:
 
 ```python
 import json
@@ -249,7 +113,7 @@ if s_email and s_pass and r_email:
                 latest_vol = volume.iloc[-1]
                 curr_p = close.iloc[-1]
 
-                tag = "🕌 [شریعہ کمپلائنٹ]" if is_shariah else "🏛️️ [KSE-100 / جنرل]"
+                tag = "🕌 [شریعہ کمپلائنٹ]" if is_shariah else "🏛️ [KSE-100 / جنرل]"
 
                 # خرید کا موقع (Oversold یا Volume Surge)
                 if latest_rsi <= 38 or (latest_vol > 1.8 * avg_vol and latest_rsi < 60):
