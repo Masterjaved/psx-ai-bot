@@ -39,13 +39,7 @@ if s_email and s_pass and r_email:
         subject = '🌅 PSX پری اوپننگ AI رپورٹ (شریعہ و KSE-100 بریک آؤٹ الرٹس)'
         header_title = '🌅 PSX مارکیٹ پری اوپننگ جامع AI رپورٹ'
     else:
-        subject = 'جاوید اقبال صاحب، تصویر بالکل صاف اور واضح ہے! ایرر مل گیا ہے[cite: 7]۔
-
-اصل میں `send_report.py` فائل کو کاپی کرتے وقت لائن 42 کے پاس غلطی سے کوڈ بلاک کا ٹیکسٹ (` ```python `) پیسٹ ہو گیا تھا، جس کی وجہ سے پائتھن کا سنٹیکس ایرر (`SyntaxError: unterminated string literal`) آ رہا ہے[cite: 7]۔
-
-اس ایرر کو ختم کرنے کے لیے اپنی GitHub ریپوزٹری میں جا کر **`send_report.py`** فائل کو ایڈٹ کریں اور اس کا پورا مواد ہٹا کر یہ بالکل صاف کوڈ کاپی کر کے **Commit changes** کر دیں:
-
-```python
+        subject = '```python
 import json
 import os
 import smtplib
