@@ -7,7 +7,6 @@ import base64
 from bs4 import BeautifulSoup
 import yfinance as yf
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 st.set_page_config(
     page_title="PSX AI Value Investing & Portfolio Portal",
@@ -15,38 +14,31 @@ st.set_page_config(
     layout="wide"
 )
 
-# Configuration & Secrets
+# Secrets Configuration
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 REPO_NAME = st.secrets.get("REPO_NAME", "Masterjaved/psx-ai-bot")
 FILE_PATH = "portfolios_db.json"
-USERS_DB = "users_db.json"
 
 def sync_portfolio_to_github(data):
-    """پورٹ فولیو کے ڈیٹا کو خودکار گٹ ہب پر بھیجنا"""
     if not GITHUB_TOKEN:
         return False
-    
     url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
     }
-    
     try:
         res = requests.get(url, headers=headers)
         sha = res.json().get("sha", "") if res.status_code == 200 else ""
-        
         content_str = json.dumps(data, indent=4, ensure_ascii=False)
         encoded_content = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
-        
         payload = {
-            "message": "Auto-sync portfolios_db.json from Streamlit Dashboard",
+            "message": "Auto-sync portfolios_db.json",
             "content": encoded_content,
             "branch": "main"
         }
         if sha:
             payload["sha"] = sha
-            
         put_res = requests.put(url, headers=headers, json=payload)
         return put_res.status_code in [200, 201]
     except Exception:
@@ -66,7 +58,6 @@ def save_db(file_path, data):
         json.dump(data, f, indent=4, ensure_ascii=False)
     sync_portfolio_to_github(data)
 
-# Styling
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 18px !important; }
@@ -77,18 +68,19 @@ st.markdown("""
         margin-bottom: 25px; text-align: center;
     }
     .psx-header h1 { color: #ffffff; font-size: 2.2rem; margin: 0; font-weight: bold; }
-    .stButton>button { border-radius: 8px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
+# شریعہ اور غیر شریعہ / پینی اسٹاکس کی تفصیلی فہرست (Rs. 5 - Rs. 25 Range)
 SHARIAH_STOCKS = [
     'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
     'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
     'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
 ]
 
-NON_SHARIAH_STOCKS = [
-    'TRG', 'CNERGY', 'KEL', 'HUMNL', 'TELE', 'WTL', 'MCB', 'UBL', 'HBL', 'BANK'
+PENNY_NON_SHARIAH_STOCKS = [
+    'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'PRL', 'BYCO', 
+    'PACE', 'SILK', 'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS'
 ]
 
 @st.cache_data(ttl=120)
@@ -115,38 +107,35 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-# Main Portal Interface
-st.markdown("<div class='psx-header'><h1>🏛️ PSX AI انویسٹنگ پورٹل و پورٹ فولیو مینیجر</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛️ PSX AI انویسٹنگ پورٹل و مارکیٹ اسکینر</h1></div>", unsafe_allow_html=True)
 
 curr_user = "javed"
 all_ports = load_db(FILE_PATH)
 if curr_user not in all_ports:
     all_ports[curr_user] = {}
 
-tabs = st.tabs(["📂 پورٹ فولیو مینیجر", "🔍 اٹو مارکیٹ اسکینر", "📊 تکنیکی تجزیہ"])
+tabs = st.tabs(["📂 پورٹ فولیو مینیجر", "⚡ پینی اسٹاکس و سستے شیئرز (Rs.5-25)", "🔍 مکمل مارکیٹ اسکینر"])
 
-# TAB 1: PORTFOLIO MANAGER WITH DELETE OPTION
+# TAB 1: PORTFOLIO
 with tabs[0]:
-    st.subheader("📂 پورٹ فولیو مینجمنٹ (شامل کریں یا فروخت شدہ شیئر حذف کریں)")
-    
-    # 1. Add Stock Form
-    with st.expander("➕ نیا شیئر پورٹ فولیو میں شامل کریں", expanded=False):
+    st.subheader("📂 پورٹ فولیو مینجمنٹ")
+    with st.expander("➕ نیا شیئر شامل کریں", expanded=False):
         with st.form("add_stock_form"):
             c1, c2, c3 = st.columns(3)
             with c1:
-                new_sym = st.text_input("اسٹاک سمبل (مثلاً MLCF)").upper().strip()
+                new_sym = st.text_input("اسٹاک سمبل (مثلاً CNERGY, MLCF)").upper().strip()
             with c2:
-                new_price = st.number_input("خریداری قیمت (Rs.)", min_value=1.0, value=50.0)
+                new_price = st.number_input("خریداری قیمت (Rs.)", min_value=0.5, value=10.0)
             with c3:
-                new_qty = st.number_input("تعداد (Quantity)", min_value=1, value=100)
+                new_qty = st.number_input("تعداد (Quantity)", min_value=1, value=500)
                 
             c4, c5 = st.columns(2)
             with c4:
-                t_sell = st.number_input("ٹارگٹ سیل (Target Sell Rs.)", min_value=1.0, value=round(new_price * 1.15, 2))
+                t_sell = st.number_input("ٹارگٹ سیل (Target Sell)", min_value=0.5, value=round(new_price * 1.15, 2))
             with c5:
-                s_loss = st.number_input("اسٹاپ لاس (Stop Loss Rs.)", min_value=1.0, value=round(new_price * 0.90, 2))
+                s_loss = st.number_input("اسٹاپ لاس (Stop Loss)", min_value=0.5, value=round(new_price * 0.90, 2))
 
-            if st.form_submit_button("پورٹ فولیو میں محفوظ کریں"):
+            if st.form_submit_button("محفوظ کریں"):
                 if new_sym:
                     all_ports[curr_user][new_sym] = {
                         "Buy Price": new_price,
@@ -155,38 +144,21 @@ with tabs[0]:
                         "Stop Loss": s_loss
                     }
                     save_db(FILE_PATH, all_ports)
-                    st.success(f"✅ {new_sym} محفوظ ہو گیا اور GitHub پر خودکار سنک ہو گیا!")
+                    st.success(f"✅ {new_sym} پورٹ فولیو میں محفوظ ہو گیا!")
                     st.rerun()
 
-    # 2. Portfolio Table & Delete Option
     user_p = all_ports.get(curr_user, {})
     if user_p:
-        st.subheader("📋 آپ کی ہولڈنگز اور انفرادی ڈیلیٹ کے اختیارات:")
-        
-        tot_invested = 0
-        tot_current = 0
-        
+        st.subheader("📋 آپ کے پورٹ فولیو کی ہولڈنگز:")
         for sym, data in list(user_p.items()):
             p_res = fetch_psx_live_data(sym)
             live_price = p_res["price"] if p_res["status"] == "Success" else data["Buy Price"]
             
             b_price = data["Buy Price"]
             qty = data["Quantity"]
-            c_val = b_price * qty
-            l_val = live_price * qty
-            pnl = l_val - c_val
+            pnl = (live_price - b_price) * qty
             
-            tot_invested += c_val
-            tot_current += l_val
-            
-            # Status Alerts
-            status_txt = "🟢 ہولڈ رکھیں"
-            if live_price >= data.get("Target Sell", b_price * 1.15):
-                status_txt = "🎯 ٹارگٹ پورا! بیچ دیں (SELL)"
-            elif live_price <= data.get("Stop Loss", b_price * 0.90):
-                status_txt = "⚠️ اسٹاپ لاس الرٹ"
-
-            col_a, col_b, col_c, col_d, col_e = st.columns([1.5, 2, 2, 2, 1.5])
+            col_a, col_b, col_c, col_d = st.columns([2, 2, 2, 1])
             with col_a:
                 st.markdown(f"**{sym}** ({qty} شیئرز)")
             with col_b:
@@ -195,70 +167,76 @@ with tabs[0]:
                 pnl_color = "green" if pnl >= 0 else "red"
                 st.markdown(f"نفع/نقصان: <span style='color:{pnl_color};font-weight:bold;'>Rs.{pnl:+,.2f}</span>", unsafe_allow_html=True)
             with col_d:
-                st.write(status_txt)
-            with col_e:
-                # Individual Delete Button
-                if st.button(f"🗑️ ڈیلیٹ", key=f"del_{sym}"):
+                if st.button("🗑️ ڈیلیٹ", key=f"del_{sym}"):
                     del all_ports[curr_user][sym]
                     save_db(FILE_PATH, all_ports)
-                    st.warning(f"❌ {sym} پورٹ فولیو سے حذف کر دیا گیا ہے!")
                     st.rerun()
             st.divider()
-            
-        tot_pnl = tot_current - tot_invested
-        m1, m2, m3 = st.columns(3)
-        m1.metric("کل سرمایہ کاری", f"Rs. {tot_invested:,.2f}")
-        m2.metric("موجودہ مارکیٹ مالیت", f"Rs. {tot_current:,.2f}")
-        m3.metric("مجموعی نفع / نقصان", f"Rs. {tot_pnl:+,.2f}")
-    else:
-        st.info("آپ کے پورٹ فولیو میں فی الوقت کوئی شیئر نہیں ہے۔ نیا شیئر شامل کرنے کے لیے اوپر فارم استعمال کریں۔")
 
-# TAB 2: MARKET SCANNER
+# TAB 2: PENNY STOCKS & VOLUME SCANNER (Rs. 5 - 25)
 with tabs[1]:
-    st.subheader("🔍 لائیو مارکیٹ اٹو اسکینر (KSE-100 & KMI-30)")
-    if st.button("🚀 لائیو مارکیٹ اسکین شروع کریں"):
-        all_list = [(s, "🕌 شریعہ") for s in SHARIAH_STOCKS] + [(s, "🏛️ جنرل") for s in NON_SHARIAH_STOCKS]
-        scan_results = []
+    st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (قیمت 5 سے 25 روپے)")
+    st.info("یہاں ان شیئرز کی لائیو فہرست ہے جن کی قیمت کم ہے اور ان میں والیوم اور والٹیلٹی (چلبل) زیادہ ہوتی ہے:")
+    
+    if st.button("🔍 سستے شیئرز کا اسکین شروع کریں"):
+        penny_results = []
         progress = st.progress(0)
         
-        for idx, (s_sym, cat) in enumerate(all_list):
+        for idx, s_sym in enumerate(PENNY_NON_SHARIAH_STOCKS):
+            try:
+                df_p = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
+                if not df_p.empty:
+                    c_close = df_p['Close'].iloc[:, 0] if isinstance(df_p['Close'], pd.DataFrame) else df_p['Close']
+                    c_vol = df_p['Volume'].iloc[:, 0] if isinstance(df_p['Volume'], pd.DataFrame) else df_p['Volume']
+                    
+                    price = c_close.iloc[-1]
+                    vol = c_vol.iloc[-1]
+                    r_val = calculate_rsi(c_close).iloc[-1]
+                    
+                    # 5 سے 25 روپے کا فلٹر
+                    if 3.0 <= price <= 30.0:
+                        sig = "متوازن"
+                        if r_val <= 38:
+                            sig = "🟢 خرید کا موقع (BUY)"
+                        elif r_val >= 68:
+                            sig = "🔴 منافع بک کریں (SELL)"
+                            
+                        penny_results.append({
+                            "اسٹاک": s_sym,
+                            "قیمت (Rs.)": f"{price:,.2f}",
+                            "روزانہ حجم (Volume)": f"{int(vol):,}",
+                            "RSI انڈیکیٹر": round(r_val, 2),
+                            "تجویز": sig
+                        })
+            except Exception:
+                pass
+            progress.progress((idx + 1) / len(PENNY_NON_SHARIAH_STOCKS))
+            
+        if penny_results:
+            st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
+        else:
+            st.warning("ڈیٹا لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔")
+
+# TAB 3: GENERAL SCANNER
+with tabs[2]:
+    st.subheader("🔍 تمام اسٹاکس کا جنرل اسکینر")
+    if st.button("🚀 مکمل مارکیٹ اسکین کریں"):
+        all_list = SHARIAH_STOCKS + PENNY_NON_SHARIAH_STOCKS
+        gen_results = []
+        progress = st.progress(0)
+        for idx, s_sym in enumerate(all_list):
             try:
                 df_scan = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
                 if not df_scan.empty:
                     c_close = df_scan['Close'].iloc[:, 0] if isinstance(df_scan['Close'], pd.DataFrame) else df_scan['Close']
                     c_price = c_close.iloc[-1]
                     r_val = calculate_rsi(c_close).iloc[-1]
-                    
-                    sig = "متوازن (Hold)"
-                    if r_val <= 38:
-                        sig = "🟢 خرید کا موقع (BUY)"
-                    elif r_val >= 68:
-                        sig = "🔴 منافع بک کریں (SELL)"
-                        
-                    scan_results.append({
+                    gen_results.append({
                         "اسٹاک": s_sym,
-                        "قسم": cat,
                         "قیمت": f"Rs. {c_price:,.2f}",
-                        "RSI": round(r_val, 2),
-                        "سگنل": sig
+                        "RSI": round(r_val, 2)
                     })
             except Exception:
                 pass
             progress.progress((idx + 1) / len(all_list))
-            
-        st.dataframe(pd.DataFrame(scan_results), use_container_width=True)
-
-# TAB 3: TECHNICAL CHART
-with tabs[2]:
-    st.subheader("📊 چارٹ و ٹیکنیکل اشارے")
-    s_input = st.text_input("اسٹاک کا نام لکھیں:", value="FFC").upper().strip()
-    if s_input:
-        try:
-            df_chart = yf.download(f"{s_input}.KA", period="6mo", interval="1d", progress=False)
-            if not df_chart.empty:
-                close = df_chart['Close'].iloc[:, 0] if isinstance(df_chart['Close'], pd.DataFrame) else df_chart['Close']
-                fig = go.Figure(data=[go.Candlestick(x=df_chart.index, open=df_chart['Open'], high=df_chart['High'], low=df_chart['Low'], close=close)])
-                fig.update_layout(template="plotly_dark", height=450)
-                st.plotly_chart(fig, use_container_width=True)
-        except Exception:
-            st.error("ڈیٹا لوڈ نہیں ہو سکا۔")
+        st.dataframe(pd.DataFrame(gen_results), use_container_width=True)
