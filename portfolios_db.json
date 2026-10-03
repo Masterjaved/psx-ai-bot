@@ -29,6 +29,12 @@
             "Quantity": 21,
             "Target Sell": 240.26,
             "Stop Loss": 188.03
+        },
+        "MLCF": {
+            "Buy Price": 103.96,
+            "Quantity": 55,
+            "Target Sell": 119.55,
+            "Stop Loss": 93.56
         }
     }
 }
