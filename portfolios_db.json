@@ -17,6 +17,12 @@
             "Quantity": 30,
             "Target Sell": 224.16,
             "Stop Loss": 175.43
+        },
+        "FFC": {
+            "Buy Price": 584.51,
+            "Quantity": 8,
+            "Target Sell": 672.19,
+            "Stop Loss": 526.06
         }
     }
 }
