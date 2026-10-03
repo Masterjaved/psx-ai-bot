@@ -62,7 +62,7 @@ def save_json(file_path, data):
 # Load Users & Portfolios
 users_db = load_json(USERS_FILE, {})
 if "javed" not in users_db:
-    users_db["Masterjaved"] = {"pass": "javed123", "email": "masterjaved@gmail.com"}
+    users_db["javed"] = {"pass": "javed123", "email": "masterjaved@gmail.com"}
 
 ports_db = load_json(PORTFOLIO_FILE, {})
 
@@ -123,13 +123,19 @@ if not st.session_state["logged_in"]:
         u_input = st.sidebar.text_input("یوزر نیم (Username)").strip()
         p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password").strip()
         if st.sidebar.button("لاگ ان کریں"):
-            if u_input in users_db:
-                u_info = users_db[u_input]
+            u_matched = None
+            for key in users_db.keys():
+                if key.lower() == u_input.lower():
+                    u_matched = key
+                    break
+            
+            if u_matched:
+                u_info = users_db[u_matched]
                 saved_pass = u_info.get("pass") if isinstance(u_info, dict) else u_info
                 if saved_pass == p_input:
                     st.session_state["logged_in"] = True
-                    st.session_state["user_id"] = u_input
-                    st.sidebar.success(f"خوش آمدید {u_input}!")
+                    st.session_state["user_id"] = u_matched
+                    st.sidebar.success(f"خوش آمدید {u_matched}!")
                     st.rerun()
                 else:
                     st.sidebar.error("غلط پاسورڈ!")
@@ -164,12 +170,12 @@ else:
         st.rerun()
 
 curr_user = st.session_state["user_id"]
-is_admin = (curr_user == "javed")
+is_admin = (curr_user.lower() == "javed")
 
 if is_admin:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
 else:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
 
 tabs = st.tabs(tab_list)
 
@@ -234,9 +240,64 @@ with tabs[0]:
                         st.rerun()
                 st.divider()
 
-# TAB 2: ADMIN USER MANAGEMENT (FULL CONTROL)
+# TAB 2: AI STOCK ANALYSIS (تجزیہ کنندہ)
+with tabs[1]:
+    st.subheader("🤖 AI اسٹاک اور کمپنی کا لائیو تجزیہ")
+    st.markdown("کسی بھی کمپنی کا نام یا سمبل درج کریں تاکہ سسٹم اس کی لائیو پرائس، تاریخی ڈیٹا اور ٹیکنیکل انڈیکیٹرز کو پڑھ کر تجزیہ کرے:")
+    
+    col_s1, col_s2 = st.columns([3, 1])
+    with col_s1:
+        target_stock = st.text_input("اسٹاک سمبل درج کریں (مثلاً MLCF, FFC, CNERGY, LUCK):", value="MLCF").upper().strip()
+    with col_s2:
+        st.write("")
+        st.write("")
+        analyze_btn = st.button("📊 تجزیہ کریں")
+        
+    if analyze_btn and target_stock:
+        with st.spinner(f"{target_stock} کا ڈیٹا اکٹھا کر کے تجزیہ تیار کیا جا رہا ہے..."):
+            p_info = fetch_psx_live_data(target_stock)
+            try:
+                df_a = yf.download(f"{target_stock}.KA", period="3mo", interval="1d", progress=False)
+                if not df_a.empty:
+                    c_close = df_a['Close'].iloc[:, 0] if isinstance(df_a['Close'], pd.DataFrame) else df_a['Close']
+                    c_vol = df_a['Volume'].iloc[:, 0] if isinstance(df_a['Volume'], pd.DataFrame) else df_a['Volume']
+                    
+                    curr_p = p_info["price"] if p_info["status"] == "Success" else c_close.iloc[-1]
+                    rsi_val = calculate_rsi(c_close).iloc[-1]
+                    sma_20 = c_close.rolling(window=20).mean().iloc[-1]
+                    high_3m = c_close.max()
+                    low_3m = c_close.min()
+                    avg_vol = c_vol.mean()
+                    
+                    st.success(f"✅ {target_stock} کا لائیو تجزیہ مکمل!")
+                    
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric("لائیو قیمت", f"Rs. {curr_p:,.2f}")
+                    m2.metric("RSI انڈیکیٹر", f"{rsi_val:.1f}")
+                    m3.metric("3 ماہ کی بلند ترین قیمت", f"Rs. {high_3m:,.2f}")
+                    m4.metric("3 ماہ کی کم ترین قیمت", f"Rs. {low_3m:,.2f}")
+                    
+                    st.markdown("### 📝 AI تجزیاتی خلاصہ:")
+                    
+                    rec_status = ""
+                    if rsi_val < 35:
+                        rec_status = "🟢 **خریداری کی زبردست گنجائش (Oversold):** یہ شیئر کافی نیچے آ چکا ہے اور فنی اعتبار سے یہاں سے باؤنس بیک کا امکان زیادہ ہے۔"
+                    elif rsi_val > 70:
+                        rec_status = "🔴 **زیادہ خریدا جا چکا ہے (Overbought):** شیئر اوپر جا چکا ہے، یہاں نئی انٹری میں محتاط رہیں اور پرافٹ ٹیکنگ پر غور کریں۔"
+                    else:
+                        rec_status = "🟡 **نرم رجحان (Neutral):** شیئر نارمل رینج میں ٹریڈ ہو رہا ہے۔ معاشی یا کمپنی رپورٹس کا انتظار کریں۔"
+                        
+                    st.write(rec_status)
+                    st.write(f"- **20 دنوں کی اوسط قیمت (SMA 20):** Rs. {sma_20:,.2f}")
+                    st.write(f"- **اوسط روزانہ والیوم:** {int(avg_vol):,} شیئرز")
+                else:
+                    st.error(f"اسٹاک {target_stock} کا چارٹ ڈیٹا حاصل نہیں ہو سکا۔")
+            except Exception as e:
+                st.error(f"تجزیہ کے دوران مسئلہ پیش آیا: {e}")
+
+# TAB 3: ADMIN USER MANAGEMENT
 if is_admin:
-    with tabs[1]:
+    with tabs[2]:
         st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر و پاسورڈ مینجمنٹ")
         
         col_adm1, col_adm2 = st.columns(2)
@@ -286,7 +347,7 @@ if is_admin:
             with col_u3:
                 st.write(f"📧 `{u_e}`")
             with col_u4:
-                if u_name != "javed":
+                if u_name.lower() != "javed":
                     if st.button("🗑 ڈیلیٹ", key=f"del_user_{u_name}"):
                         del users_db[u_name]
                         if u_name in ports_db:
@@ -297,8 +358,8 @@ if is_admin:
                         st.rerun()
             st.divider()
 
-# TAB 3: PENNY STOCKS
-p_tab_idx = 2 if is_admin else 1
+# TAB 4: PENNY STOCKS
+p_tab_idx = 3 if is_admin else 2
 with tabs[p_tab_idx]:
     st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5-25)")
     if st.button("🔍 سستے شیئرز اسکین کریں"):
@@ -327,8 +388,8 @@ with tabs[p_tab_idx]:
         if penny_results:
             st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
 
-# TAB 4: GENERAL SCANNER
-g_tab_idx = 3 if is_admin else 2
+# TAB 5: GENERAL SCANNER
+g_tab_idx = 4 if is_admin else 3
 with tabs[g_tab_idx]:
     st.subheader("🔍 مارکیٹ اسکینر")
     if st.button("🚀 اسکین شروع کریں"):
