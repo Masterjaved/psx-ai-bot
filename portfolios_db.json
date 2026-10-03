@@ -11,6 +11,12 @@
             "Quantity": 368,
             "Target Sell": 16.08,
             "Stop Loss": 12.58
+        },
+        "EFERT": {
+            "Buy Price": 194.92,
+            "Quantity": 30,
+            "Target Sell": 224.16,
+            "Stop Loss": 175.43
         }
     }
 }
