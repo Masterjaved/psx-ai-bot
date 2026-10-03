@@ -8,18 +8,16 @@ from bs4 import BeautifulSoup
 import yfinance as yf
 
 st.set_page_config(
-    page_title="PSX AI Multi-User Investing Portal",
+    page_title="PSX AI Multi-User Portal",
     page_icon="🏛️",
     layout="wide"
 )
 
-# Secrets & Files
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 REPO_NAME = st.secrets.get("REPO_NAME", "Masterjaved/psx-ai-bot")
 PORTFOLIO_FILE = "portfolios_db.json"
 USERS_FILE = "users_db.json"
 
-# Helper to sync files to GitHub
 def sync_file_to_github(file_path, data):
     if not GITHUB_TOKEN:
         return False
@@ -49,7 +47,8 @@ def load_json(file_path, default_data):
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                res = json.load(f)
+                return res if res else default_data
         except Exception:
             return default_data
     return default_data
@@ -59,9 +58,11 @@ def save_json(file_path, data):
         json.dump(data, f, indent=4, ensure_ascii=False)
     sync_file_to_github(file_path, data)
 
-# Load Users & Portfolios
-default_users = {"javed": "javed123"}
-users_db = load_json(USERS_FILE, default_users)
+users_db = load_json(USERS_FILE, {})
+# Ensure admin user setup
+if "javed" not in users_db:
+    users_db["javed"] = {"pass": "javed123", "email": "masterjaved@gmail.com"}
+
 ports_db = load_json(PORTFOLIO_FILE, {})
 
 st.markdown("""
@@ -104,27 +105,54 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-st.markdown("<div class='psx-header'><h1>🏛️ PSX AI ایڈمن و ملٹی یوزر پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI محفوظ ملٹی یوزر پورٹل</h1></div>", unsafe_allow_html=True)
 
-# Authentication State
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "user_id" not in st.session_state:
     st.session_state["user_id"] = ""
 
-# Sidebar Authentication
-st.sidebar.title("🔐 لاگ ان سسٹم")
+st.sidebar.title("🔐 لاگ ان و سائن اپ")
+
 if not st.session_state["logged_in"]:
-    u_input = st.sidebar.text_input("یوزر نیم (Username)").strip()
-    p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password").strip()
-    if st.sidebar.button("لاگ ان"):
-        if u_input in users_db and users_db[u_input] == p_input:
-            st.session_state["logged_in"] = True
-            st.session_state["user_id"] = u_input
-            st.sidebar.success(f"خوش آمدید {u_input}!")
-            st.rerun()
-        else:
-            st.sidebar.error("غلط یوزر نیم یا پاسورڈ!")
+    auth_mode = st.sidebar.radio("طریقہ منتخب کریں:", ["لاگ ان (Login)", "نیا سائن اپ (Sign Up)"])
+    
+    if auth_mode == "لاگ ان (Login)":
+        u_input = st.sidebar.text_input("یوزر نیم (Username)").strip()
+        p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password").strip()
+        if st.sidebar.button("لاگ ان کریں"):
+            if u_input in users_db:
+                u_data = users_db[u_input]
+                saved_pass = u_data.get("pass") if isinstance(u_data, dict) else u_data
+                if saved_pass == p_input:
+                    st.session_state["logged_in"] = True
+                    st.session_state["user_id"] = u_input
+                    st.sidebar.success(f"خوش آمدید {u_input}!")
+                    st.rerun()
+                else:
+                    st.sidebar.error("غلط پاسورڈ!")
+            else:
+                st.sidebar.error("غلط یوزر نیم!")
+                
+    else:  # Sign Up
+        new_u = st.sidebar.text_input("نیا یوزر نیم").strip()
+        new_e = st.sidebar.text_input("ای میل ایڈریس (جہاں پورٹ فولیو رپورٹ آئے گی)").strip()
+        new_p = st.sidebar.text_input("نیا پاسورڈ", type="password").strip()
+        confirm_p = st.sidebar.text_input("پاسورڈ کی تصدیق کریں", type="password").strip()
+        
+        if st.sidebar.button("اکاؤنٹ بنائیں (Register)"):
+            if not new_u or not new_p or not new_e:
+                st.sidebar.error("تمام خانے بشمول ای میل پر کرنا لازمی ہیں۔")
+            elif "@" not in new_e or "." not in new_e:
+                st.sidebar.error("براہ کرم درست ای میل ایڈریس درج کریں۔")
+            elif new_p != confirm_p:
+                st.sidebar.error("پاسورڈ میچ نہیں ہو رہا!")
+            elif new_u in users_db:
+                st.sidebar.error("یہ یوزر نیم پہلے سے موجود ہے!")
+            else:
+                users_db[new_u] = {"pass": new_p, "email": new_e}
+                save_json(USERS_FILE, users_db)
+                st.sidebar.success("✅ رجسٹریشن کامیاب! اب لاگ ان منتخب کر کے لاگ ان کریں۔")
 else:
     st.sidebar.success(f"لاگ ان بطور: **{st.session_state['user_id']}**")
     if st.sidebar.button("لاگ آؤٹ"):
@@ -132,7 +160,6 @@ else:
         st.session_state["user_id"] = ""
         st.rerun()
 
-# Dynamic Tabs based on Admin role
 curr_user = st.session_state["user_id"]
 is_admin = (curr_user == "javed")
 
@@ -146,7 +173,7 @@ tabs = st.tabs(tab_list)
 # TAB 1: PORTFOLIO
 with tabs[0]:
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ اپنے پورٹ فولیو تک رسائی کے لیے سائڈ بار (Sidebar) سے لاگ ان کریں۔")
+        st.warning("⚠️ اپنے پورٹ فولیو تک رسائی حاصل کرنے کے لیے سائڈ بار سے لاگ ان یا نیا سائن اپ کریں۔")
     else:
         st.subheader(f"📂 {curr_user} کا پورٹ فولیو")
         if curr_user not in ports_db:
@@ -204,45 +231,33 @@ with tabs[0]:
                         st.rerun()
                 st.divider()
 
-# TAB 2: USER MANAGEMENT (ADMIN ONLY)
+# TAB 2: ADMIN USER MANAGEMENT
 if is_admin:
     with tabs[1]:
         st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر مینجمنٹ")
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.markdown("### ➕ نیا یوزر بنائیں")
-            with st.form("create_user_form"):
-                new_u = st.text_input("نیا یوزر نیم").strip()
-                new_p = st.text_input("نیا پاسورڈ").strip()
-                if st.form_submit_button("یوزر شامل کریں"):
-                    if new_u and new_p:
-                        users_db[new_u] = new_p
+        st.markdown("### 📋 تمام رجسٹرڈ یوزرز اور ان کے ای میلز")
+        for u_name, u_info in list(users_db.items()):
+            u_p = u_info.get("pass") if isinstance(u_info, dict) else u_info
+            u_e = u_info.get("email", "ای میل نہیں ہے") if isinstance(u_info, dict) else "N/A"
+            
+            col_u1, col_u2, col_u3, col_u4 = st.columns([2, 2, 2, 1])
+            with col_u1:
+                st.write(f"👤 **{u_name}**")
+            with col_u2:
+                st.write(f"🔑 `{u_p}`")
+            with col_u3:
+                st.write(f"📧 `{u_e}`")
+            with col_u4:
+                if u_name != "javed":
+                    if st.button("🗑 ڈیلیٹ", key=f"del_user_{u_name}"):
+                        del users_db[u_name]
+                        if u_name in ports_db:
+                            del ports_db[u_name]
+                            save_json(PORTFOLIO_FILE, ports_db)
                         save_json(USERS_FILE, users_db)
-                        st.success(f"✅ نیا یوزر '{new_u}' شامل کر دیا گیا!")
+                        st.success(f"یوزر '{u_name}' ڈیلیٹ کر دیا گیا!")
                         st.rerun()
-                    else:
-                        st.error("براہ کرم یوزر نیم اور پاسورڈ دونوں درج کریں۔")
-
-        with c2:
-            st.markdown("### 📋 موجودہ یوزرز کی فہرست")
-            for u_name, u_pass in list(users_db.items()):
-                col_u1, col_u2, col_u3 = st.columns([2, 2, 1])
-                with col_u1:
-                    st.write(f"👤 **{u_name}**")
-                with col_u2:
-                    st.write(f"🔑 `{u_pass}`")
-                with col_u3:
-                    if u_name != "javed":
-                        if st.button("🗑️ ڈیلیٹ", key=f"del_user_{u_name}"):
-                            del users_db[u_name]
-                            if u_name in ports_db:
-                                del ports_db[u_name]
-                                save_json(PORTFOLIO_FILE, ports_db)
-                            save_json(USERS_FILE, users_db)
-                            st.success(f"یوزر '{u_name}' ڈیلیٹ کر دیا گیا!")
-                            st.rerun()
-                st.divider()
+            st.divider()
 
 # TAB 3: PENNY STOCKS
 p_tab_idx = 2 if is_admin else 1
