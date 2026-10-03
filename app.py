@@ -6,27 +6,24 @@ import requests
 import base64
 from bs4 import BeautifulSoup
 import yfinance as yf
-import plotly.graph_objects as go
 
 st.set_page_config(
-    page_title="PSX AI Value Investing & Portfolio Portal",
+    page_title="PSX AI Multi-User Investing Portal",
     page_icon="🏛️",
     layout="wide"
 )
 
-# Secrets Configuration
+# Secrets & Files
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 REPO_NAME = st.secrets.get("REPO_NAME", "Masterjaved/psx-ai-bot")
-FILE_PATH = "portfolios_db.json"
+PORTFOLIO_FILE = "portfolios_db.json"
+USERS_FILE = "users_db.json"
 
-# Admin Credentials (ڈیفالٹ لاگ ان)
-ADMIN_USER = st.secrets.get("ADMIN_USER", "javed")
-ADMIN_PASS = st.secrets.get("ADMIN_PASS", "javed123")
-
-def sync_portfolio_to_github(data):
+# Helper to sync files to GitHub
+def sync_file_to_github(file_path, data):
     if not GITHUB_TOKEN:
         return False
-    url = f"https://api.github.com/repos/{REPO_NAME}/contents/{FILE_PATH}"
+    url = f"https://api.github.com/repos/{REPO_NAME}/contents/{file_path}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
@@ -37,7 +34,7 @@ def sync_portfolio_to_github(data):
         content_str = json.dumps(data, indent=4, ensure_ascii=False)
         encoded_content = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
         payload = {
-            "message": "Auto-sync portfolios_db.json",
+            "message": f"Auto-sync {file_path}",
             "content": encoded_content,
             "branch": "main"
         }
@@ -48,19 +45,24 @@ def sync_portfolio_to_github(data):
     except Exception:
         return False
 
-def load_db(file_path):
+def load_json(file_path, default_data):
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
-            return {}
-    return {}
+            return default_data
+    return default_data
 
-def save_db(file_path, data):
+def save_json(file_path, data):
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
-    sync_portfolio_to_github(data)
+    sync_file_to_github(file_path, data)
+
+# Load Users & Portfolios
+default_users = {"javed": "javed123"}
+users_db = load_json(USERS_FILE, default_users)
+ports_db = load_json(PORTFOLIO_FILE, {})
 
 st.markdown("""
     <style>
@@ -68,24 +70,15 @@ st.markdown("""
     .main { background: linear-gradient(135deg, #0d1b1e 0%, #000000 100%); color: #ffffff; }
     .psx-header {
         background: linear-gradient(90deg, #004d40 0%, #05291d 50%, #00251a 100%);
-        padding: 25px; border-radius: 15px; border-bottom: 4px solid #FFD700;
-        margin-bottom: 25px; text-align: center;
+        padding: 20px; border-radius: 12px; border-bottom: 4px solid #FFD700;
+        margin-bottom: 20px; text-align: center;
     }
-    .psx-header h1 { color: #ffffff; font-size: 2.2rem; margin: 0; font-weight: bold; }
+    .psx-header h1 { color: #ffffff; font-size: 2rem; margin: 0; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
-# Stocks Lists
-SHARIAH_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 
-    'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 
-    'SHEL', 'SEARL', 'AVN', 'GATRON', 'TREAT', 'MARI', 'PSO', 'DCR'
-]
-
-PENNY_NON_SHARIAH_STOCKS = [
-    'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'PRL', 'BYCO', 
-    'PACE', 'SILK', 'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS'
-]
+SHARIAH_STOCKS = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 'PSO']
+PENNY_STOCKS = ['CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK', 'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS']
 
 @st.cache_data(ttl=120)
 def fetch_psx_live_data(symbol):
@@ -111,46 +104,54 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-st.markdown("<div class='psx-header'><h1>🏛️ PSX AI محفوظ پورٹ فولیو پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛️ PSX AI ایڈمن و ملٹی یوزر پورٹل</h1></div>", unsafe_allow_html=True)
 
-# Authentication Session State
+# Authentication State
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = ""
 
-# Sidebar Login System
-st.sidebar.title("🔒 ایڈمن لاگ ان")
+# Sidebar Authentication
+st.sidebar.title("🔐 لاگ ان سسٹم")
 if not st.session_state["logged_in"]:
-    u_input = st.sidebar.text_input("یوزر نیم (User Name)")
-    p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password")
-    if st.sidebar.button("لاگ ان کریں"):
-        if u_input == ADMIN_USER and p_input == ADMIN_PASS:
+    u_input = st.sidebar.text_input("یوزر نیم (Username)").strip()
+    p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password").strip()
+    if st.sidebar.button("لاگ ان"):
+        if u_input in users_db and users_db[u_input] == p_input:
             st.session_state["logged_in"] = True
             st.session_state["user_id"] = u_input
-            st.sidebar.success("لاگ ان کامیاب!")
+            st.sidebar.success(f"خوش آمدید {u_input}!")
             st.rerun()
         else:
             st.sidebar.error("غلط یوزر نیم یا پاسورڈ!")
 else:
-    st.sidebar.success(f"خوش آمدید، {st.session_state.get('user_id', 'Admin')}!")
+    st.sidebar.success(f"لاگ ان بطور: **{st.session_state['user_id']}**")
     if st.sidebar.button("لاگ آؤٹ"):
         st.session_state["logged_in"] = False
+        st.session_state["user_id"] = ""
         st.rerun()
 
-all_ports = load_db(FILE_PATH)
+# Dynamic Tabs based on Admin role
+curr_user = st.session_state["user_id"]
+is_admin = (curr_user == "javed")
 
-tabs = st.tabs(["🔒 محفوظ پورٹ فولیو مینیجر", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"])
+if is_admin:
+    tab_list = ["📂 پورٹ فولیو مینیجر", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
+else:
+    tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
 
-# TAB 1: PORTFOLIO (PROTECTED)
+tabs = st.tabs(tab_list)
+
+# TAB 1: PORTFOLIO
 with tabs[0]:
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ پورٹ فولیو تک رسائی حاصل کرنے اور ترمیم کرنے کے لیے سائڈ بار (Sidebar) سے لاگ ان کریں۔")
+        st.warning("⚠️ اپنے پورٹ فولیو تک رسائی کے لیے سائڈ بار (Sidebar) سے لاگ ان کریں۔")
     else:
-        curr_user = st.session_state.get("user_id", "javed")
-        if curr_user not in all_ports:
-            all_ports[curr_user] = {}
-            
-        st.subheader(f"📂 {curr_user} کا پورٹ فولیو مینیجر")
-        
+        st.subheader(f"📂 {curr_user} کا پورٹ فولیو")
+        if curr_user not in ports_db:
+            ports_db[curr_user] = {}
+
         with st.expander("➕ نیا شیئر شامل کریں", expanded=False):
             with st.form("add_stock_form"):
                 c1, c2, c3 = st.columns(3)
@@ -169,23 +170,21 @@ with tabs[0]:
 
                 if st.form_submit_button("محفوظ کریں"):
                     if new_sym:
-                        all_ports[curr_user][new_sym] = {
+                        ports_db[curr_user][new_sym] = {
                             "Buy Price": new_price,
                             "Quantity": new_qty,
                             "Target Sell": t_sell,
                             "Stop Loss": s_loss
                         }
-                        save_db(FILE_PATH, all_ports)
+                        save_json(PORTFOLIO_FILE, ports_db)
                         st.success(f"✅ {new_sym} محفوظ ہو گیا!")
                         st.rerun()
 
-        user_p = all_ports.get(curr_user, {})
+        user_p = ports_db.get(curr_user, {})
         if user_p:
-            st.subheader("📋 آپ کی ہولڈنگز:")
             for sym, data in list(user_p.items()):
                 p_res = fetch_psx_live_data(sym)
                 live_price = p_res["price"] if p_res["status"] == "Success" else data["Buy Price"]
-                
                 b_price = data["Buy Price"]
                 qty = data["Quantity"]
                 pnl = (live_price - b_price) * qty
@@ -200,18 +199,59 @@ with tabs[0]:
                     st.markdown(f"نفع/نقصان: <span style='color:{pnl_color};font-weight:bold;'>Rs.{pnl:+,.2f}</span>", unsafe_allow_html=True)
                 with col_d:
                     if st.button("🗑️ ڈیلیٹ", key=f"del_{sym}"):
-                        del all_ports[curr_user][sym]
-                        save_db(FILE_PATH, all_ports)
+                        del ports_db[curr_user][sym]
+                        save_json(PORTFOLIO_FILE, ports_db)
                         st.rerun()
                 st.divider()
 
-# TAB 2: PENNY STOCKS
-with tabs[1]:
-    st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5 سے Rs. 25)")
+# TAB 2: USER MANAGEMENT (ADMIN ONLY)
+if is_admin:
+    with tabs[1]:
+        st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر مینجمنٹ")
+        
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("### ➕ نیا یوزر بنائیں")
+            with st.form("create_user_form"):
+                new_u = st.text_input("نیا یوزر نیم").strip()
+                new_p = st.text_input("نیا پاسورڈ").strip()
+                if st.form_submit_button("یوزر شامل کریں"):
+                    if new_u and new_p:
+                        users_db[new_u] = new_p
+                        save_json(USERS_FILE, users_db)
+                        st.success(f"✅ نیا یوزر '{new_u}' شامل کر دیا گیا!")
+                        st.rerun()
+                    else:
+                        st.error("براہ کرم یوزر نیم اور پاسورڈ دونوں درج کریں۔")
+
+        with c2:
+            st.markdown("### 📋 موجودہ یوزرز کی فہرست")
+            for u_name, u_pass in list(users_db.items()):
+                col_u1, col_u2, col_u3 = st.columns([2, 2, 1])
+                with col_u1:
+                    st.write(f"👤 **{u_name}**")
+                with col_u2:
+                    st.write(f"🔑 `{u_pass}`")
+                with col_u3:
+                    if u_name != "javed":
+                        if st.button("🗑️ ڈیلیٹ", key=f"del_user_{u_name}"):
+                            del users_db[u_name]
+                            if u_name in ports_db:
+                                del ports_db[u_name]
+                                save_json(PORTFOLIO_FILE, ports_db)
+                            save_json(USERS_FILE, users_db)
+                            st.success(f"یوزر '{u_name}' ڈیلیٹ کر دیا گیا!")
+                            st.rerun()
+                st.divider()
+
+# TAB 3: PENNY STOCKS
+p_tab_idx = 2 if is_admin else 1
+with tabs[p_tab_idx]:
+    st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5-25)")
     if st.button("🔍 سستے شیئرز اسکین کریں"):
         penny_results = []
         progress = st.progress(0)
-        for idx, s_sym in enumerate(PENNY_NON_SHARIAH_STOCKS):
+        for idx, s_sym in enumerate(PENNY_STOCKS):
             try:
                 df_p = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
                 if not df_p.empty:
@@ -230,15 +270,16 @@ with tabs[1]:
                         })
             except Exception:
                 pass
-            progress.progress((idx + 1) / len(PENNY_NON_SHARIAH_STOCKS))
+            progress.progress((idx + 1) / len(PENNY_STOCKS))
         if penny_results:
             st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
 
-# TAB 3: GENERAL SCANNER
-with tabs[2]:
+# TAB 4: GENERAL SCANNER
+g_tab_idx = 3 if is_admin else 2
+with tabs[g_tab_idx]:
     st.subheader("🔍 مارکیٹ اسکینر")
     if st.button("🚀 اسکین شروع کریں"):
-        all_list = SHARIAH_STOCKS + PENNY_NON_SHARIAH_STOCKS
+        all_list = SHARIAH_STOCKS + PENNY_STOCKS
         gen_results = []
         progress = st.progress(0)
         for idx, s_sym in enumerate(all_list):
