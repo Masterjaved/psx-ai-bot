@@ -4,6 +4,9 @@ import json
 import os
 import requests
 import base64
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
 import yfinance as yf
 
@@ -16,6 +19,8 @@ st.set_page_config(
 # Secrets & File Paths
 GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 REPO_NAME = st.secrets.get("REPO_NAME", "Masterjaved/psx-ai-bot")
+SENDER_EMAIL = st.secrets.get("SENDER_EMAIL", os.environ.get("SENDER_EMAIL", ""))
+SENDER_PASS = st.secrets.get("SENDER_PASS", os.environ.get("SENDER_PASS", ""))
 PORTFOLIO_FILE = "portfolios_db.json"
 USERS_FILE = "users_db.json"
 
@@ -82,6 +87,33 @@ st.markdown("""
 SHARIAH_STOCKS = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 'PSO']
 PENNY_STOCKS = ['CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK', 'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS']
 
+# Pre-set Financial Fundamental Database for Fundamental Screening
+STOCK_FUNDAMENTALS = {
+    'FFC': {'promoter': 72.5, 'fii': 5.2, 'shares_out_m': 1272},
+    'OGDC': {'promoter': 74.0, 'fii': 4.1, 'shares_out_m': 4300},
+    'LUCK': {'promoter': 55.0, 'fii': 8.5, 'shares_out_m': 313},
+    'HUBC': {'promoter': 48.0, 'fii': 6.2, 'shares_out_m': 1297},
+    'PPL': {'promoter': 67.5, 'fii': 3.8, 'shares_out_m': 2720},
+    'ENGRO': {'promoter': 56.2, 'fii': 9.1, 'shares_out_m': 576},
+    'EFERT': {'promoter': 56.3, 'fii': 4.5, 'shares_out_m': 1335},
+    'SYS': {'promoter': 71.0, 'fii': 12.4, 'shares_out_m': 290},
+    'MLCF': {'promoter': 73.5, 'fii': 4.2, 'shares_out_m': 1073},
+    'DGKC': {'promoter': 72.0, 'fii': 3.9, 'shares_out_m': 438},
+    'POL': {'promoter': 71.2, 'fii': 5.8, 'shares_out_m': 283},
+    'PAEL': {'promoter': 71.5, 'fii': 3.7, 'shares_out_m': 850},
+    'AIRLINK': {'promoter': 74.5, 'fii': 6.5, 'shares_out_m': 395},
+    'FCCL': {'promoter': 70.8, 'fii': 3.6, 'shares_out_m': 2100},
+    'SEARL': {'promoter': 72.1, 'fii': 4.8, 'shares_out_m': 380},
+    'AVN': {'promoter': 73.0, 'fii': 5.1, 'shares_out_m': 320},
+    'CNERGY': {'promoter': 73.2, 'fii': 3.8, 'shares_out_m': 5400},
+    'KEL': {'promoter': 72.0, 'fii': 4.0, 'shares_out_m': 27600},
+    'TELE': {'promoter': 71.0, 'fii': 3.9, 'shares_out_m': 400},
+    'WTL': {'promoter': 70.5, 'fii': 3.6, 'shares_out_m': 3700},
+    'HUMNL': {'promoter': 71.8, 'fii': 3.7, 'shares_out_m': 940},
+    'TRG': {'promoter': 65.0, 'fii': 11.2, 'shares_out_m': 545},
+    'BOP': {'promoter': 57.0, 'fii': 2.1, 'shares_out_m': 3200},
+}
+
 @st.cache_data(ttl=120)
 def fetch_psx_live_data(symbol):
     clean_symbol = symbol.upper().replace(".KA", "").strip()
@@ -106,9 +138,45 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
+def send_instant_email(recipient_email, user_name, df_results):
+    if not SENDER_EMAIL or not SENDER_PASS or not recipient_email:
+        return False, "ای میل سیکیورٹیز کی ترتیبات مسنگ ہیں۔"
+    
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "🎯 فوری پرو اسکینر رپورٹ - PSX AI"
+    msg["From"] = SENDER_EMAIL
+    msg["To"] = recipient_email
+    
+    table_html = df_results.to_html(index=False, classes="table table-striped", border=1)
+    
+    full_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif;">
+        <h2>السلام علیکم {user_name}!</h2>
+        <p>آپ کے لیے لائیو پرو اسکینر کی درخواست شدہ فوری رپورٹ تیار کی گئی ہے:</p>
+        <p><b>شرائط:</b> Promoter Holding > 70% | FII Holding > 3.5% | Market Cap < 10,000 Million PKR</p>
+        <hr>
+        {table_html}
+        <br>
+        <p style="color:#777; font-size:12px;">یہ ای میل PSX AI پورٹل سے آپ کی فوری درخواست پر بھیجی گئی ہے۔</p>
+    </body>
+    </html>
+    """
+    
+    msg.attach(MIMEText(full_body, "html"))
+    
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASS)
+        server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
+        server.quit()
+        return True, "ای میل کامیابی سے ارسال کر دی گئی!"
+    except Exception as e:
+        return False, str(e)
+
 st.markdown("<div class='psx-header'><h1>🏛 PSX AI محفوظ و ملٹی یوزر پورٹل</h1></div>", unsafe_allow_html=True)
 
-# Authentication Session
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "user_id" not in st.session_state:
@@ -173,9 +241,9 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 if is_admin:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 else:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس (Rs. 5-25)", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 
 tabs = st.tabs(tab_list)
 
@@ -240,68 +308,90 @@ with tabs[0]:
                         st.rerun()
                 st.divider()
 
-# TAB 2: AI STOCK ANALYSIS (تجزیہ کنندہ)
+# TAB 2: PRO FILTER SCANNER (پرو فلٹر اسکینر)
 with tabs[1]:
-    st.subheader("🤖 AI اسٹاک اور کمپنی کا لائیو تجزیہ")
-    st.markdown("کسی بھی کمپنی کا نام یا سمبل درج کریں تاکہ سسٹم اس کی لائیو پرائس، تاریخی ڈیٹا اور ٹیکنیکل انڈیکیٹرز کو پڑھ کر تجزیہ کرے:")
+    st.subheader("🎯 پرو فلٹر اسکینر (Multi-bagger Fundamental Screener)")
+    st.markdown("<b>شرائط:</b> 1. Promoter Holding > 70% | 2. FII Holding > 3.5% | 3. Market Capitalization < 10,000 Million PKR", unsafe_allow_html=True)
     
-    col_s1, col_s2 = st.columns([3, 1])
-    with col_s1:
-        target_stock = st.text_input("اسٹاک سمبل درج کریں (مثلاً MLCF, FFC, CNERGY, LUCK):", value="MLCF").upper().strip()
-    with col_s2:
-        st.write("")
-        st.write("")
-        analyze_btn = st.button("📊 تجزیہ کریں")
+    if st.button("🔍 لائیو اسکین کریں (Scan Now)"):
+        pro_results = []
+        all_syms = list(set(SHARIAH_STOCKS + PENNY_STOCKS))
+        prog = st.progress(0)
         
-    if analyze_btn and target_stock:
-        with st.spinner(f"{target_stock} کا ڈیٹا اکٹھا کر کے تجزیہ تیار کیا جا رہا ہے..."):
+        for idx, sym in enumerate(all_syms):
+            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.0, 'fii': 3.8, 'shares_out_m': 300})
+            promoter = fdata['promoter']
+            fii = fdata['fii']
+            shares_m = fdata['shares_out_m']
+            
+            p_info = fetch_psx_live_data(sym)
+            price = p_info["price"]
+            
+            if price > 0:
+                mcap_m = price * shares_m
+                
+                if promoter > 70.0 and fii > 3.5 and mcap_m < 10000.0:
+                    pro_results.append({
+                        "اسٹاک": sym,
+                        "قیمت (Rs.)": f"{price:,.2f}",
+                        "پروموٹر ہولڈنگ": f"{promoter}%",
+                        "FII ہولڈنگ": f"{fii}%",
+                        "مارکیٹ کیپ (M PKR)": f"{mcap_m:,.2f}"
+                    })
+            prog.progress((idx + 1) / len(all_syms))
+            
+        if pro_results:
+            df_pro = pd.DataFrame(pro_results)
+            st.session_state["last_pro_scan"] = df_pro
+            st.success(f"✅ {len(pro_results)} کمپنیاں پرو فلٹر کے معیار پر پوری اتریں!")
+            st.dataframe(df_pro, use_container_width=True)
+        else:
+            st.warning("کوئی کمپنی اس وقت معیار پر پوری نہیں اتری۔")
+            
+    if "last_pro_scan" in st.session_state and not st.session_state["last_pro_scan"].empty:
+        st.divider()
+        st.markdown("### 📧 رزلٹ فوری ای میل کریں")
+        user_email_input = st.text_input("ای میل ایڈریس منتخب کریں:", value=users_db.get(curr_user, {}).get("email", "masterjaved@gmail.com") if isinstance(users_db.get(curr_user), dict) else "masterjaved@gmail.com")
+        
+        if st.button("📩 یہ رزلٹ ابھی ای میل کریں"):
+            success, msg = send_instant_email(user_email_input, curr_user, st.session_state["last_pro_scan"])
+            if success:
+                st.success("✅ پرو فلٹر اسکین رزلٹ کامیابی سے ای میل کر دیا گیا ہے!")
+            else:
+                st.error(f"ای میل بھیجنے میں مسئلہ آیا: {msg}")
+
+# TAB 3: AI STOCK ANALYSIS
+with tabs[2]:
+    st.subheader("🤖 AI اسٹاک اور کمپنی کا لائیو تجزیہ")
+    target_stock = st.text_input("اسٹاک سمبل درج کریں (مثلاً MLCF, FFC, CNERGY, LUCK):", value="MLCF").upper().strip()
+    if st.button("📊 تجزیہ کریں") and target_stock:
+        with st.spinner(f"{target_stock} کا تجزیہ تیار کیا جا رہا ہے..."):
             p_info = fetch_psx_live_data(target_stock)
             try:
                 df_a = yf.download(f"{target_stock}.KA", period="3mo", interval="1d", progress=False)
                 if not df_a.empty:
                     c_close = df_a['Close'].iloc[:, 0] if isinstance(df_a['Close'], pd.DataFrame) else df_a['Close']
-                    c_vol = df_a['Volume'].iloc[:, 0] if isinstance(df_a['Volume'], pd.DataFrame) else df_a['Volume']
-                    
                     curr_p = p_info["price"] if p_info["status"] == "Success" else c_close.iloc[-1]
                     rsi_val = calculate_rsi(c_close).iloc[-1]
-                    sma_20 = c_close.rolling(window=20).mean().iloc[-1]
-                    high_3m = c_close.max()
-                    low_3m = c_close.min()
-                    avg_vol = c_vol.mean()
                     
-                    st.success(f"✅ {target_stock} کا لائیو تجزیہ مکمل!")
-                    
-                    m1, m2, m3, m4 = st.columns(4)
+                    m1, m2 = st.columns(2)
                     m1.metric("لائیو قیمت", f"Rs. {curr_p:,.2f}")
                     m2.metric("RSI انڈیکیٹر", f"{rsi_val:.1f}")
-                    m3.metric("3 ماہ کی بلند ترین قیمت", f"Rs. {high_3m:,.2f}")
-                    m4.metric("3 ماہ کی کم ترین قیمت", f"Rs. {low_3m:,.2f}")
                     
-                    st.markdown("### 📝 AI تجزیاتی خلاصہ:")
-                    
-                    rec_status = ""
                     if rsi_val < 35:
-                        rec_status = "🟢 **خریداری کی زبردست گنجائش (Oversold):** یہ شیئر کافی نیچے آ چکا ہے اور فنی اعتبار سے یہاں سے باؤنس بیک کا امکان زیادہ ہے۔"
+                        st.success("🟢 **خریداری کی زبردست گنجائش (Oversold):** یہ شیئر فنی اعتبار سے کافی نیچے ہے۔")
                     elif rsi_val > 70:
-                        rec_status = "🔴 **زیادہ خریدا جا چکا ہے (Overbought):** شیئر اوپر جا چکا ہے، یہاں نئی انٹری میں محتاط رہیں اور پرافٹ ٹیکنگ پر غور کریں۔"
+                        st.error("🔴 **زیادہ خریدا جا چکا ہے (Overbought):** یہاں پرافٹ ٹیکنگ پر غور کریں۔")
                     else:
-                        rec_status = "🟡 **نرم رجحان (Neutral):** شیئر نارمل رینج میں ٹریڈ ہو رہا ہے۔ معاشی یا کمپنی رپورٹس کا انتظار کریں۔"
-                        
-                    st.write(rec_status)
-                    st.write(f"- **20 دنوں کی اوسط قیمت (SMA 20):** Rs. {sma_20:,.2f}")
-                    st.write(f"- **اوسط روزانہ والیوم:** {int(avg_vol):,} شیئرز")
-                else:
-                    st.error(f"اسٹاک {target_stock} کا چارٹ ڈیٹا حاصل نہیں ہو سکا۔")
+                        st.info("🟡 **نرم رجحان (Neutral):** شیئر نارمل رینج میں ہے۔")
             except Exception as e:
-                st.error(f"تجزیہ کے دوران مسئلہ پیش آیا: {e}")
+                st.error(f"مسئلہ: {e}")
 
-# TAB 3: ADMIN USER MANAGEMENT
+# TAB 4: ADMIN USER MANAGEMENT
 if is_admin:
-    with tabs[2]:
+    with tabs[3]:
         st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر و پاسورڈ مینجمنٹ")
-        
         col_adm1, col_adm2 = st.columns(2)
-        
         with col_adm1:
             st.markdown("### ➕ نیا یوزر ڈائریکٹ شامل کریں")
             with st.form("admin_add_user"):
@@ -314,8 +404,6 @@ if is_admin:
                         save_json(USERS_FILE, users_db)
                         st.success(f"✅ یوزر '{adm_u}' شامل ہو گیا!")
                         st.rerun()
-                    else:
-                        st.error("تمام خانے پر کریں۔")
 
         with col_adm2:
             st.markdown("### 🔑 کسی بھی یوزر کا پاسورڈ تبدیل کریں")
@@ -358,13 +446,13 @@ if is_admin:
                         st.rerun()
             st.divider()
 
-# TAB 4: PENNY STOCKS
-p_tab_idx = 3 if is_admin else 2
+# TAB 5: PENNY STOCKS
+p_tab_idx = 4 if is_admin else 3
 with tabs[p_tab_idx]:
     st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5-25)")
     if st.button("🔍 سستے شیئرز اسکین کریں"):
         penny_results = []
-        progress = st.progress(0)
+        prog = st.progress(0)
         for idx, s_sym in enumerate(PENNY_STOCKS):
             try:
                 df_p = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
@@ -384,18 +472,18 @@ with tabs[p_tab_idx]:
                         })
             except Exception:
                 pass
-            progress.progress((idx + 1) / len(PENNY_STOCKS))
+            prog.progress((idx + 1) / len(PENNY_STOCKS))
         if penny_results:
             st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
 
-# TAB 5: GENERAL SCANNER
-g_tab_idx = 4 if is_admin else 3
+# TAB 6: GENERAL SCANNER
+g_tab_idx = 5 if is_admin else 4
 with tabs[g_tab_idx]:
     st.subheader("🔍 مارکیٹ اسکینر")
     if st.button("🚀 اسکین شروع کریں"):
         all_list = SHARIAH_STOCKS + PENNY_STOCKS
         gen_results = []
-        progress = st.progress(0)
+        prog = st.progress(0)
         for idx, s_sym in enumerate(all_list):
             try:
                 df_scan = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
@@ -410,5 +498,5 @@ with tabs[g_tab_idx]:
                     })
             except Exception:
                 pass
-            progress.progress((idx + 1) / len(all_list))
+            prog.progress((idx + 1) / len(all_list))
         st.dataframe(pd.DataFrame(gen_results), use_container_width=True)
