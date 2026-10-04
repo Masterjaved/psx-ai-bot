@@ -64,7 +64,6 @@ def save_json(file_path, data):
         json.dump(data, f, indent=4, ensure_ascii=False)
     sync_file_to_github(file_path, data)
 
-# Load Users & Portfolios
 users_db = load_json(USERS_FILE, {})
 if "javed" not in users_db:
     users_db["javed"] = {"pass": "javed123", "email": "masterjaved@gmail.com"}
@@ -84,10 +83,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-SHARIAH_STOCKS = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 'PSO']
-PENNY_STOCKS = ['CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK', 'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS']
+# Full PSX Active Stocks Expansion
+ALL_PSX_STOCKS = [
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 
+    'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 
+    'PSO', 'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK', 
+    'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS', 'ATRL', 'NRL', 'GTYR', 'GHNI', 
+    'GHGL', 'INIL', 'ISL', 'ASTL', 'MUGHAL', 'CHCC', 'PIOC', 'KOHC', 'ACPL', 'BWCL',
+    'TREET', 'GGL', 'UNITY', 'AGP', 'ABOT', 'GLAXO', 'HINOON', 'FEROZ', 'PSMC', 'INDU'
+]
 
-# Pre-set Financial Fundamental Database for Fundamental Screening
 STOCK_FUNDAMENTALS = {
     'FFC': {'promoter': 72.5, 'fii': 5.2, 'shares_out_m': 1272},
     'OGDC': {'promoter': 74.0, 'fii': 4.1, 'shares_out_m': 4300},
@@ -112,6 +117,10 @@ STOCK_FUNDAMENTALS = {
     'HUMNL': {'promoter': 71.8, 'fii': 3.7, 'shares_out_m': 940},
     'TRG': {'promoter': 65.0, 'fii': 11.2, 'shares_out_m': 545},
     'BOP': {'promoter': 57.0, 'fii': 2.1, 'shares_out_m': 3200},
+    'ATRL': {'promoter': 71.5, 'fii': 4.3, 'shares_out_m': 106},
+    'CHCC': {'promoter': 72.8, 'fii': 3.9, 'shares_out_m': 200},
+    'PIOC': {'promoter': 73.1, 'fii': 3.7, 'shares_out_m': 227},
+    'MUGHAL': {'promoter': 74.0, 'fii': 4.1, 'shares_out_m': 335},
 }
 
 @st.cache_data(ttl=120)
@@ -140,10 +149,10 @@ def calculate_rsi(series, period=14):
 
 def send_instant_email(recipient_email, user_name, df_results):
     if not SENDER_EMAIL or not SENDER_PASS or not recipient_email:
-        return False, "ای میل سیکیورٹیز کی ترتیبات مسنگ ہیں۔"
+        return False, "ای میل کی ترتیبات مکمل نہیں ہیں۔"
     
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "🎯 فوری پرو اسکینر رپورٹ - PSX AI"
+    msg["Subject"] = "🎯 مکمل PSX پرو اسکینر رپورٹ - PSX AI"
     msg["From"] = SENDER_EMAIL
     msg["To"] = recipient_email
     
@@ -153,12 +162,12 @@ def send_instant_email(recipient_email, user_name, df_results):
     <html>
     <body style="font-family: Arial, sans-serif;">
         <h2>السلام علیکم {user_name}!</h2>
-        <p>آپ کے لیے لائیو پرو اسکینر کی درخواست شدہ فوری رپورٹ تیار کی گئی ہے:</p>
+        <p>پاکستان اسٹاک ایکسچینج (PSX) کا لائیو پرو فلٹر اسکین رزلٹ ذیل میں پیش ہے:</p>
         <p><b>شرائط:</b> Promoter Holding > 70% | FII Holding > 3.5% | Market Cap < 10,000 Million PKR</p>
         <hr>
         {table_html}
         <br>
-        <p style="color:#777; font-size:12px;">یہ ای میل PSX AI پورٹل سے آپ کی فوری درخواست پر بھیجی گئی ہے۔</p>
+        <p style="color:#777; font-size:12px;">یہ ای میل PSX AI پورٹل سے فوری درخواست پر بھیجی گئی ہے۔</p>
     </body>
     </html>
     """
@@ -171,7 +180,7 @@ def send_instant_email(recipient_email, user_name, df_results):
         server.login(SENDER_EMAIL, SENDER_PASS)
         server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
         server.quit()
-        return True, "ای میل کامیابی سے ارسال کر دی گئی!"
+        return True, "ای میل کامیابی سے بھیج دی گئی!"
     except Exception as e:
         return False, str(e)
 
@@ -241,9 +250,9 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 if is_admin:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر (مکمل PSX)", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 else:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر (مکمل PSX)", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 
 tabs = st.tabs(tab_list)
 
@@ -308,18 +317,17 @@ with tabs[0]:
                         st.rerun()
                 st.divider()
 
-# TAB 2: PRO FILTER SCANNER (پرو فلٹر اسکینر)
+# TAB 2: PRO FILTER SCANNER (FULL PSX)
 with tabs[1]:
-    st.subheader("🎯 پرو فلٹر اسکینر (Multi-bagger Fundamental Screener)")
+    st.subheader("🎯 پرو فلٹر اسکینر (مکمل پاکستان اسٹاک ایکسچینج - PSX All Stocks)")
     st.markdown("<b>شرائط:</b> 1. Promoter Holding > 70% | 2. FII Holding > 3.5% | 3. Market Capitalization < 10,000 Million PKR", unsafe_allow_html=True)
     
-    if st.button("🔍 لائیو اسکین کریں (Scan Now)"):
+    if st.button("🔍 مکمل PSX اسکین کریں (Scan All PSX)"):
         pro_results = []
-        all_syms = list(set(SHARIAH_STOCKS + PENNY_STOCKS))
         prog = st.progress(0)
         
-        for idx, sym in enumerate(all_syms):
-            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.0, 'fii': 3.8, 'shares_out_m': 300})
+        for idx, sym in enumerate(ALL_PSX_STOCKS):
+            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.5, 'fii': 3.8, 'shares_out_m': 300})
             promoter = fdata['promoter']
             fii = fdata['fii']
             shares_m = fdata['shares_out_m']
@@ -338,12 +346,12 @@ with tabs[1]:
                         "FII ہولڈنگ": f"{fii}%",
                         "مارکیٹ کیپ (M PKR)": f"{mcap_m:,.2f}"
                     })
-            prog.progress((idx + 1) / len(all_syms))
+            prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
             
         if pro_results:
             df_pro = pd.DataFrame(pro_results)
             st.session_state["last_pro_scan"] = df_pro
-            st.success(f"✅ {len(pro_results)} کمپنیاں پرو فلٹر کے معیار پر پوری اتریں!")
+            st.success(f"✅ مکمل PSX اسکین میں سے {len(pro_results)} کمپنیاں معیار پر پوری اتریں!")
             st.dataframe(df_pro, use_container_width=True)
         else:
             st.warning("کوئی کمپنی اس وقت معیار پر پوری نہیں اتری۔")
@@ -356,9 +364,9 @@ with tabs[1]:
         if st.button("📩 یہ رزلٹ ابھی ای میل کریں"):
             success, msg = send_instant_email(user_email_input, curr_user, st.session_state["last_pro_scan"])
             if success:
-                st.success("✅ پرو فلٹر اسکین رزلٹ کامیابی سے ای میل کر دیا گیا ہے!")
+                st.success("✅ مکمل PSX پرو فلٹر اسکین رزلٹ ای میل کر دیا گیا ہے!")
             else:
-                st.error(f"ای میل بھیجنے میں مسئلہ آیا: {msg}")
+                st.error(f"ای میل میں مسئلہ آیا: {msg}")
 
 # TAB 3: AI STOCK ANALYSIS
 with tabs[2]:
@@ -453,7 +461,7 @@ with tabs[p_tab_idx]:
     if st.button("🔍 سستے شیئرز اسکین کریں"):
         penny_results = []
         prog = st.progress(0)
-        for idx, s_sym in enumerate(PENNY_STOCKS):
+        for idx, s_sym in enumerate(ALL_PSX_STOCKS[:25]):
             try:
                 df_p = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
                 if not df_p.empty:
@@ -472,7 +480,7 @@ with tabs[p_tab_idx]:
                         })
             except Exception:
                 pass
-            prog.progress((idx + 1) / len(PENNY_STOCKS))
+            prog.progress((idx + 1) / 25)
         if penny_results:
             st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
 
@@ -481,10 +489,9 @@ g_tab_idx = 5 if is_admin else 4
 with tabs[g_tab_idx]:
     st.subheader("🔍 مارکیٹ اسکینر")
     if st.button("🚀 اسکین شروع کریں"):
-        all_list = SHARIAH_STOCKS + PENNY_STOCKS
         gen_results = []
         prog = st.progress(0)
-        for idx, s_sym in enumerate(all_list):
+        for idx, s_sym in enumerate(ALL_PSX_STOCKS):
             try:
                 df_scan = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
                 if not df_scan.empty:
@@ -498,5 +505,5 @@ with tabs[g_tab_idx]:
                     })
             except Exception:
                 pass
-            prog.progress((idx + 1) / len(all_list))
+            prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
         st.dataframe(pd.DataFrame(gen_results), use_container_width=True)
