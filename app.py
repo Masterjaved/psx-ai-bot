@@ -83,7 +83,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Full PSX Active Stocks Expansion
 ALL_PSX_STOCKS = [
     'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 
     'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 
@@ -116,7 +115,6 @@ STOCK_FUNDAMENTALS = {
     'WTL': {'promoter': 70.5, 'fii': 3.6, 'shares_out_m': 3700},
     'HUMNL': {'promoter': 71.8, 'fii': 3.7, 'shares_out_m': 940},
     'TRG': {'promoter': 65.0, 'fii': 11.2, 'shares_out_m': 545},
-    'BOP': {'promoter': 57.0, 'fii': 2.1, 'shares_out_m': 3200},
     'ATRL': {'promoter': 71.5, 'fii': 4.3, 'shares_out_m': 106},
     'CHCC': {'promoter': 72.8, 'fii': 3.9, 'shares_out_m': 200},
     'PIOC': {'promoter': 73.1, 'fii': 3.7, 'shares_out_m': 227},
@@ -147,12 +145,33 @@ def calculate_rsi(series, period=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
+def evaluate_dow_theory(df):
+    if df.empty or len(df) < 15:
+        return "🟡 معلوم نہیں", "ڈیٹا ناکافی ہے"
+    
+    close = df['Close'].iloc[:, 0] if isinstance(df['Close'], pd.DataFrame) else df['Close']
+    vol = df['Volume'].iloc[:, 0] if isinstance(df['Volume'], pd.DataFrame) else df['Volume']
+    
+    recent_price = close.iloc[-1]
+    prev_high = close.iloc[-15:-1].max()
+    prev_low = close.iloc[-15:-1].min()
+    
+    avg_vol = vol.iloc[-15:-1].mean()
+    recent_vol = vol.iloc[-1]
+    
+    if recent_price > prev_high and recent_vol > avg_vol:
+        return "🟢 خریدیں (Buying Zone)", "Higher High بنے کے ساتھ والیم بھی زبردست ہے! اپ ٹرینڈ شروع ہو چکا ہے۔"
+    elif recent_price < prev_low:
+        return "🔴 بیچیں / باہر نکلیں (Selling Zone)", "قیمت نے پچھلی نچلی سطح کو توڑ دیا ہے۔ ڈاؤن ٹرینڈ سے بچیں۔"
+    else:
+        return "🟡 انتظار کریں (Hold / Neutral)", "قیمت نارمل رینج میں ہے۔ بریک آؤٹ کا انتظار کریں۔"
+
 def send_instant_email(recipient_email, user_name, df_results):
     if not SENDER_EMAIL or not SENDER_PASS or not recipient_email:
         return False, "ای میل کی ترتیبات مکمل نہیں ہیں۔"
     
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "🎯 مکمل PSX پرو اسکینر رپورٹ - PSX AI"
+    msg["Subject"] = "🎯 مکمل PSX پرو اسکینر و ڈاؤ تھیوری رپورٹ - PSX AI"
     msg["From"] = SENDER_EMAIL
     msg["To"] = recipient_email
     
@@ -250,9 +269,9 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 if is_admin:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر (مکمل PSX)", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 else:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🎯 پرو فلٹر اسکینر (مکمل PSX)", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
+    tab_list = ["📂 پورٹ فولیو مینیجر", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
 
 tabs = st.tabs(tab_list)
 
@@ -317,12 +336,42 @@ with tabs[0]:
                         st.rerun()
                 st.divider()
 
-# TAB 2: PRO FILTER SCANNER (FULL PSX)
+# TAB 2: DOW THEORY BUY/SELL ZONE
 with tabs[1]:
-    st.subheader("🎯 پرو فلٹر اسکینر (مکمل پاکستان اسٹاک ایکسچینج - PSX All Stocks)")
+    st.subheader("🏛️ ڈاؤ تھیوری: بائنگ اور سیلنگ زون اسکینر")
+    st.markdown("یہ ٹول چارٹ کے پچھلے ہائی/لو (High/Low) اور والیوم کو ملا کر آپ کو واضح بتاتا ہے کہ کون سا شیئر خریدنے کی رینج میں ہے اور کون سا بیچنے کی رینج میں:")
+    
+    if st.button("🚀 ڈاؤ تھیوری اسکین چلائیں"):
+        dow_results = []
+        prog = st.progress(0)
+        
+        for idx, sym in enumerate(ALL_PSX_STOCKS[:30]):
+            try:
+                df_d = yf.download(f"{sym}.KA", period="1mo", interval="1d", progress=False)
+                if not df_d.empty:
+                    c_close = df_d['Close'].iloc[:, 0] if isinstance(df_d['Close'], pd.DataFrame) else df_d['Close']
+                    c_price = c_close.iloc[-1]
+                    signal, desc = evaluate_dow_theory(df_d)
+                    
+                    dow_results.append({
+                        "اسٹاک": sym,
+                        "لائیو قیمت": f"Rs. {c_price:,.2f}",
+                        "ڈاؤ تھیوری سگنل": signal,
+                        "تفصیلی وجہ": desc
+                    })
+            except Exception:
+                pass
+            prog.progress((idx + 1) / 30)
+            
+        if dow_results:
+            st.dataframe(pd.DataFrame(dow_results), use_container_width=True)
+
+# TAB 3: PRO FILTER SCANNER
+with tabs[2]:
+    st.subheader("🎯 پرو فلٹر اسکینر (Multi-bagger Screener)")
     st.markdown("<b>شرائط:</b> 1. Promoter Holding > 70% | 2. FII Holding > 3.5% | 3. Market Capitalization < 10,000 Million PKR", unsafe_allow_html=True)
     
-    if st.button("🔍 مکمل PSX اسکین کریں (Scan All PSX)"):
+    if st.button("🔍 پرو اسکین کریں"):
         pro_results = []
         prog = st.progress(0)
         
@@ -337,7 +386,6 @@ with tabs[1]:
             
             if price > 0:
                 mcap_m = price * shares_m
-                
                 if promoter > 70.0 and fii > 3.5 and mcap_m < 10000.0:
                     pro_results.append({
                         "اسٹاک": sym,
@@ -351,25 +399,11 @@ with tabs[1]:
         if pro_results:
             df_pro = pd.DataFrame(pro_results)
             st.session_state["last_pro_scan"] = df_pro
-            st.success(f"✅ مکمل PSX اسکین میں سے {len(pro_results)} کمپنیاں معیار پر پوری اتریں!")
+            st.success(f"✅ {len(pro_results)} کمپنیاں پرو فلٹر کے معیار پر پوری اتریں!")
             st.dataframe(df_pro, use_container_width=True)
-        else:
-            st.warning("کوئی کمپنی اس وقت معیار پر پوری نہیں اتری۔")
-            
-    if "last_pro_scan" in st.session_state and not st.session_state["last_pro_scan"].empty:
-        st.divider()
-        st.markdown("### 📧 رزلٹ فوری ای میل کریں")
-        user_email_input = st.text_input("ای میل ایڈریس منتخب کریں:", value=users_db.get(curr_user, {}).get("email", "masterjaved@gmail.com") if isinstance(users_db.get(curr_user), dict) else "masterjaved@gmail.com")
-        
-        if st.button("📩 یہ رزلٹ ابھی ای میل کریں"):
-            success, msg = send_instant_email(user_email_input, curr_user, st.session_state["last_pro_scan"])
-            if success:
-                st.success("✅ مکمل PSX پرو فلٹر اسکین رزلٹ ای میل کر دیا گیا ہے!")
-            else:
-                st.error(f"ای میل میں مسئلہ آیا: {msg}")
 
-# TAB 3: AI STOCK ANALYSIS
-with tabs[2]:
+# TAB 4: AI STOCK ANALYSIS
+with tabs[3]:
     st.subheader("🤖 AI اسٹاک اور کمپنی کا لائیو تجزیہ")
     target_stock = st.text_input("اسٹاک سمبل درج کریں (مثلاً MLCF, FFC, CNERGY, LUCK):", value="MLCF").upper().strip()
     if st.button("📊 تجزیہ کریں") and target_stock:
@@ -381,23 +415,20 @@ with tabs[2]:
                     c_close = df_a['Close'].iloc[:, 0] if isinstance(df_a['Close'], pd.DataFrame) else df_a['Close']
                     curr_p = p_info["price"] if p_info["status"] == "Success" else c_close.iloc[-1]
                     rsi_val = calculate_rsi(c_close).iloc[-1]
+                    dow_sig, dow_desc = evaluate_dow_theory(df_a)
                     
                     m1, m2 = st.columns(2)
                     m1.metric("لائیو قیمت", f"Rs. {curr_p:,.2f}")
                     m2.metric("RSI انڈیکیٹر", f"{rsi_val:.1f}")
                     
-                    if rsi_val < 35:
-                        st.success("🟢 **خریداری کی زبردست گنجائش (Oversold):** یہ شیئر فنی اعتبار سے کافی نیچے ہے۔")
-                    elif rsi_val > 70:
-                        st.error("🔴 **زیادہ خریدا جا چکا ہے (Overbought):** یہاں پرافٹ ٹیکنگ پر غور کریں۔")
-                    else:
-                        st.info("🟡 **نرم رجحان (Neutral):** شیئر نارمل رینج میں ہے۔")
+                    st.markdown(f"### 🏛️ ڈاؤ تھیوری سٹیٹس: {dow_sig}")
+                    st.write(f"👉 **تفصیل:** {dow_desc}")
             except Exception as e:
                 st.error(f"مسئلہ: {e}")
 
-# TAB 4: ADMIN USER MANAGEMENT
+# TAB 5: ADMIN USER MANAGEMENT
 if is_admin:
-    with tabs[3]:
+    with tabs[4]:
         st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر و پاسورڈ مینجمنٹ")
         col_adm1, col_adm2 = st.columns(2)
         with col_adm1:
@@ -454,8 +485,8 @@ if is_admin:
                         st.rerun()
             st.divider()
 
-# TAB 5: PENNY STOCKS
-p_tab_idx = 4 if is_admin else 3
+# TAB 6: PENNY STOCKS
+p_tab_idx = 5 if is_admin else 4
 with tabs[p_tab_idx]:
     st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5-25)")
     if st.button("🔍 سستے شیئرز اسکین کریں"):
@@ -484,8 +515,8 @@ with tabs[p_tab_idx]:
         if penny_results:
             st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
 
-# TAB 6: GENERAL SCANNER
-g_tab_idx = 5 if is_admin else 4
+# TAB 7: GENERAL SCANNER
+g_tab_idx = 6 if is_admin else 5
 with tabs[g_tab_idx]:
     st.subheader("🔍 مارکیٹ اسکینر")
     if st.button("🚀 اسکین شروع کریں"):
