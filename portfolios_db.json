@@ -41,6 +41,12 @@
             "Quantity": 27,
             "Target Sell": 364.87,
             "Stop Loss": 285.55
+        },
+        "HUBC": {
+            "Buy Price": 202.84,
+            "Quantity": 45,
+            "Target Sell": 233.27,
+            "Stop Loss": 182.56
         }
     }
 }
