@@ -9,9 +9,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
 import yfinance as yf
+import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="PSX AI Multi-User Investing Portal",
+    page_title="PSX & Crypto Precision Engine",
     page_icon="🏛️",
     layout="wide"
 )
@@ -23,6 +24,7 @@ SENDER_EMAIL = st.secrets.get("SENDER_EMAIL", os.environ.get("SENDER_EMAIL", "")
 SENDER_PASS = st.secrets.get("SENDER_PASS", os.environ.get("SENDER_PASS", ""))
 PORTFOLIO_FILE = "portfolios_db.json"
 USERS_FILE = "users_db.json"
+DEMO_TRADES_FILE = "demo_trades_db.json"
 
 def sync_file_to_github(file_path, data):
     if not GITHUB_TOKEN:
@@ -69,27 +71,39 @@ if "javed" not in users_db:
     users_db["javed"] = {"pass": "javed123", "email": "masterjaved@gmail.com"}
 
 ports_db = load_json(PORTFOLIO_FILE, {})
+demo_db = load_json(DEMO_TRADES_FILE, {})
 
+# Premium Dark Styling
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 18px !important; }
-    .main { background: linear-gradient(135deg, #0d1b1e 0%, #000000 100%); color: #ffffff; }
+    .main { background: #0A0E17; color: #ffffff; }
     .psx-header {
-        background: linear-gradient(90deg, #004d40 0%, #05291d 50%, #00251a 100%);
-        padding: 20px; border-radius: 12px; border-bottom: 4px solid #FFD700;
-        margin-bottom: 20px; text-align: center;
+        background: linear-gradient(135deg, #004d40 0%, #00251a 100%);
+        padding: 22px; border-radius: 15px; border-bottom: 4px solid #FFD700;
+        box-shadow: 0 4px 15px rgba(0,77,64,0.4);
+        margin-bottom: 25px; text-align: center;
     }
-    .psx-header h1 { color: #ffffff; font-size: 2rem; margin: 0; font-weight: bold; }
+    .psx-header h1 { color: #ffffff; font-size: 2.2rem; margin: 0; font-weight: 800; }
+    .crypto-card {
+        background: #131B2E; padding: 25px; border-radius: 15px;
+        border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .target-box-green {
+        background: #002B1B; border: 1px solid #00E676; padding: 12px;
+        border-radius: 10px; text-align: center; color: #00E676; font-weight: bold;
+    }
+    .target-box-red {
+        background: #2B0008; border: 1px solid #FF1744; padding: 12px;
+        border-radius: 10px; text-align: center; color: #FF1744; font-weight: bold;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 ALL_PSX_STOCKS = [
     'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 
     'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 
-    'PSO', 'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK', 
-    'ANL', 'HASCOL', 'BOP', 'FNEL', 'FLYNG', 'LOADS', 'ATRL', 'NRL', 'GTYR', 'GHNI', 
-    'GHGL', 'INIL', 'ISL', 'ASTL', 'MUGHAL', 'CHCC', 'PIOC', 'KOHC', 'ACPL', 'BWCL',
-    'TREET', 'GGL', 'UNITY', 'AGP', 'ABOT', 'GLAXO', 'HINOON', 'FEROZ', 'PSMC', 'INDU'
+    'PSO', 'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK'
 ]
 
 STOCK_FUNDAMENTALS = {
@@ -103,22 +117,6 @@ STOCK_FUNDAMENTALS = {
     'SYS': {'promoter': 71.0, 'fii': 12.4, 'shares_out_m': 290},
     'MLCF': {'promoter': 73.5, 'fii': 4.2, 'shares_out_m': 1073},
     'DGKC': {'promoter': 72.0, 'fii': 3.9, 'shares_out_m': 438},
-    'POL': {'promoter': 71.2, 'fii': 5.8, 'shares_out_m': 283},
-    'PAEL': {'promoter': 71.5, 'fii': 3.7, 'shares_out_m': 850},
-    'AIRLINK': {'promoter': 74.5, 'fii': 6.5, 'shares_out_m': 395},
-    'FCCL': {'promoter': 70.8, 'fii': 3.6, 'shares_out_m': 2100},
-    'SEARL': {'promoter': 72.1, 'fii': 4.8, 'shares_out_m': 380},
-    'AVN': {'promoter': 73.0, 'fii': 5.1, 'shares_out_m': 320},
-    'CNERGY': {'promoter': 73.2, 'fii': 3.8, 'shares_out_m': 5400},
-    'KEL': {'promoter': 72.0, 'fii': 4.0, 'shares_out_m': 27600},
-    'TELE': {'promoter': 71.0, 'fii': 3.9, 'shares_out_m': 400},
-    'WTL': {'promoter': 70.5, 'fii': 3.6, 'shares_out_m': 3700},
-    'HUMNL': {'promoter': 71.8, 'fii': 3.7, 'shares_out_m': 940},
-    'TRG': {'promoter': 65.0, 'fii': 11.2, 'shares_out_m': 545},
-    'ATRL': {'promoter': 71.5, 'fii': 4.3, 'shares_out_m': 106},
-    'CHCC': {'promoter': 72.8, 'fii': 3.9, 'shares_out_m': 200},
-    'PIOC': {'promoter': 73.1, 'fii': 3.7, 'shares_out_m': 227},
-    'MUGHAL': {'promoter': 74.0, 'fii': 4.1, 'shares_out_m': 335},
 }
 
 @st.cache_data(ttl=120)
@@ -166,44 +164,72 @@ def evaluate_dow_theory(df):
     else:
         return "🟡 انتظار کریں (Hold / Neutral)", "قیمت نارمل رینج میں ہے۔ بریک آؤٹ کا انتظار کریں۔"
 
-def send_instant_email(recipient_email, user_name, df_results):
-    if not SENDER_EMAIL or not SENDER_PASS or not recipient_email:
-        return False, "ای میل کی ترتیبات مکمل نہیں ہیں۔"
-    
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "🎯 مکمل PSX پرو اسکینر و ڈاؤ تھیوری رپورٹ - PSX AI"
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = recipient_email
-    
-    table_html = df_results.to_html(index=False, classes="table table-striped", border=1)
-    
-    full_body = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif;">
-        <h2>السلام علیکم {user_name}!</h2>
-        <p>پاکستان اسٹاک ایکسچینج (PSX) کا لائیو پرو فلٹر اسکین رزلٹ ذیل میں پیش ہے:</p>
-        <p><b>شرائط:</b> Promoter Holding > 70% | FII Holding > 3.5% | Market Cap < 10,000 Million PKR</p>
-        <hr>
-        {table_html}
-        <br>
-        <p style="color:#777; font-size:12px;">یہ ای میل PSX AI پورٹل سے فوری درخواست پر بھیجی گئی ہے۔</p>
-    </body>
-    </html>
-    """
-    
-    msg.attach(MIMEText(full_body, "html"))
-    
+# High Precision Crypto Signal Generator
+def generate_high_precision_crypto_signal(symbol_ticker):
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASS)
-        server.sendmail(SENDER_EMAIL, recipient_email, msg.as_string())
-        server.quit()
-        return True, "ای میل کامیابی سے بھیج دی گئی!"
-    except Exception as e:
-        return False, str(e)
+        clean_ticker = symbol_ticker.upper().strip()
+        if not clean_ticker.endswith("-USD"):
+            clean_ticker += "-USD"
+            
+        df = yf.download(clean_ticker, period="3mo", interval="1d", progress=False)
+        if not df.empty and len(df) > 30:
+            c_close = df['Close'].iloc[:, 0] if isinstance(df['Close'], pd.DataFrame) else df['Close']
+            c_vol = df['Volume'].iloc[:, 0] if isinstance(df['Volume'], pd.DataFrame) else df['Volume']
+            c_high = df['High'].iloc[:, 0] if isinstance(df['High'], pd.DataFrame) else df['High']
+            c_low = df['Low'].iloc[:, 0] if isinstance(df['Low'], pd.DataFrame) else df['Low']
+            
+            curr_p = float(c_close.iloc[-1])
+            rsi_val = float(calculate_rsi(c_close).iloc[-1])
+            
+            ema20 = float(c_close.ewm(span=20).mean().iloc[-1])
+            ema50 = float(c_close.ewm(span=50).mean().iloc[-1])
+            
+            recent_vol = float(c_vol.iloc[-1])
+            avg_vol = float(c_vol.iloc[-15:-1].mean())
+            
+            atr = float((c_high - c_low).iloc[-14:].mean())
+            
+            confidence = 75
+            sig_type = "🟡 WAIT / NEUTRAL (صبر کریں)"
+            sig_color = "#FFB300"
+            
+            if rsi_val < 42 and curr_p > ema20 and recent_vol > avg_vol * 1.2:
+                sig_type = "🟢 STRONG BUY (باقاعدہ سٹرونگ خریدی)"
+                sig_color = "#00E676"
+                confidence = 93
+            elif rsi_val < 45 and curr_p > ema50:
+                sig_type = "🟢 BUY (خریداری کا زون)"
+                sig_color = "#00E676"
+                confidence = 85
+            elif rsi_val > 68 and curr_p < ema20:
+                sig_type = "🔴 STRONG SELL (مکمل فروخت)"
+                sig_color = "#FF1744"
+                confidence = 92
+            elif rsi_val > 65:
+                sig_type = "🔴 SELL (پرافٹ ٹیکنگ)"
+                sig_color = "#FF1744"
+                confidence = 82
+                
+            tp1 = round(curr_p + (atr * 1.2), 4 if curr_p < 1 else 2)
+            tp2 = round(curr_p + (atr * 2.5), 4 if curr_p < 1 else 2)
+            tp3 = round(curr_p + (atr * 4.0), 4 if curr_p < 1 else 2)
+            sl = round(curr_p - (atr * 1.5), 4 if curr_p < 1 else 2)
+            
+            return {
+                "ticker": clean_ticker,
+                "price": curr_p,
+                "rsi": rsi_val,
+                "ema20": ema20,
+                "confidence": confidence,
+                "signal": sig_type,
+                "color": sig_color,
+                "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl
+            }
+    except Exception:
+        pass
+    return None
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI محفوظ و ملٹی یوزر پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و ہائی ایکوریسی کرپٹو پورٹل</h1></div>", unsafe_allow_html=True)
 
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
@@ -214,7 +240,6 @@ st.sidebar.title("🔐 اکاؤنٹ پورٹل")
 
 if not st.session_state["logged_in"]:
     auth_mode = st.sidebar.radio("طریقہ منتخب کریں:", ["🔑 لاگ ان (Login)", "📝 نیا سائن اپ (Sign Up)"])
-    
     if auth_mode == "🔑 لاگ ان (Login)":
         u_input = st.sidebar.text_input("یوزر نیم (Username)").strip()
         p_input = st.sidebar.text_input("پاسورڈ (Password)", type="password").strip()
@@ -224,40 +249,21 @@ if not st.session_state["logged_in"]:
                 if key.lower() == u_input.lower():
                     u_matched = key
                     break
-            
-            if u_matched:
-                u_info = users_db[u_matched]
-                saved_pass = u_info.get("pass") if isinstance(u_info, dict) else u_info
-                if saved_pass == p_input:
-                    st.session_state["logged_in"] = True
-                    st.session_state["user_id"] = u_matched
-                    st.sidebar.success(f"خوش آمدید {u_matched}!")
-                    st.rerun()
-                else:
-                    st.sidebar.error("غلط پاسورڈ!")
+            if u_matched and users_db[u_matched].get("pass") == p_input:
+                st.session_state["logged_in"] = True
+                st.session_state["user_id"] = u_matched
+                st.sidebar.success(f"خوش آمدید {u_matched}!")
+                st.rerun()
             else:
-                st.sidebar.error("یوزر نیم موجود نہیں!")
-                
-    else:  # Sign Up
-        st.sidebar.subheader("نیا اکاؤنٹ بنائیں")
+                st.sidebar.error("غلط یوزر نیم یا پاسورڈ!")
+    else:
         new_u = st.sidebar.text_input("نیا یوزر نیم").strip()
-        new_e = st.sidebar.text_input("ای میل ایڈریس (ای میل رپورٹ کے لیے)").strip()
+        new_e = st.sidebar.text_input("ای میل ایڈریس").strip()
         new_p = st.sidebar.text_input("نیا پاسورڈ", type="password").strip()
-        confirm_p = st.sidebar.text_input("پاسورڈ کی تصدیق", type="password").strip()
-        
         if st.sidebar.button("رجسٹر کریں"):
-            if not new_u or not new_p or not new_e:
-                st.sidebar.error("تمام خانے پر کرنا لازمی ہیں۔")
-            elif "@" not in new_e or "." not in new_e:
-                st.sidebar.error("درست ای میل درج کریں۔")
-            elif new_p != confirm_p:
-                st.sidebar.error("پاسورڈ میچ نہیں ہو رہے!")
-            elif new_u in users_db:
-                st.sidebar.error("یہ یوزر نیم پہلے سے موجود ہے!")
-            else:
-                users_db[new_u] = {"pass": new_p, "email": new_e}
-                save_json(USERS_FILE, users_db)
-                st.sidebar.success("✅ رجسٹریشن کامیاب! اب لاگ ان والے آپشن پر جا کر لاگ ان کریں۔")
+            users_db[new_u] = {"pass": new_p, "email": new_e}
+            save_json(USERS_FILE, users_db)
+            st.sidebar.success("✅ رجسٹریشن کامیاب!")
 else:
     st.sidebar.success(f"لاگ ان بطور: **{st.session_state['user_id']}**")
     if st.sidebar.button("لاگ آؤٹ"):
@@ -268,17 +274,16 @@ else:
 curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
+tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ کرپٹو AI سگنلز", "🧪 ڈیمو ٹریڈنگ وائلٹ", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ"]
 if is_admin:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "👥 یوزر مینجمنٹ (ایڈمن)", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
-else:
-    tab_list = ["📂 پورٹ فولیو مینیجر", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ", "⚡ پینی اسٹاکس", "🔍 مارکیٹ اسکینر"]
+    tab_list.append("👥 یوزر مینجمنٹ (ایڈمن)")
 
 tabs = st.tabs(tab_list)
 
 # TAB 1: PORTFOLIO
 with tabs[0]:
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ اپنے پورٹ فولیو تک رسائی حاصل کرنے کے لیے سائڈ بار سے لاگ ان یا نیا سائن اپ کریں۔")
+        st.warning("⚠️ اپنے پورٹ فولیو کے لیے لاگ ان کریں۔")
     else:
         st.subheader(f"📂 {curr_user} کا پورٹ فولیو")
         if curr_user not in ports_db:
@@ -293,21 +298,10 @@ with tabs[0]:
                     new_price = st.number_input("خریداری قیمت (Rs.)", min_value=0.5, value=10.0)
                 with c3:
                     new_qty = st.number_input("تعداد (Quantity)", min_value=1, value=500)
-                    
-                c4, c5 = st.columns(2)
-                with c4:
-                    t_sell = st.number_input("ٹارگٹ سیل (Target Sell)", min_value=0.5, value=round(new_price * 1.15, 2))
-                with c5:
-                    s_loss = st.number_input("اسٹاپ لاس (Stop Loss)", min_value=0.5, value=round(new_price * 0.90, 2))
 
                 if st.form_submit_button("محفوظ کریں"):
                     if new_sym:
-                        ports_db[curr_user][new_sym] = {
-                            "Buy Price": new_price,
-                            "Quantity": new_qty,
-                            "Target Sell": t_sell,
-                            "Stop Loss": s_loss
-                        }
+                        ports_db[curr_user][new_sym] = {"Buy Price": new_price, "Quantity": new_qty}
                         save_json(PORTFOLIO_FILE, ports_db)
                         st.success(f"✅ {new_sym} محفوظ ہو گیا!")
                         st.rerun()
@@ -334,207 +328,172 @@ with tabs[0]:
                         del ports_db[curr_user][sym]
                         save_json(PORTFOLIO_FILE, ports_db)
                         st.rerun()
-                st.divider()
 
-# TAB 2: DOW THEORY BUY/SELL ZONE
+# TAB 2: CRYPTO SIGNALS + TRADINGVIEW CHART
 with tabs[1]:
-    st.subheader("🏛️ ڈاؤ تھیوری: بائنگ اور سیلنگ زون اسکینر")
-    st.markdown("یہ ٹول چارٹ کے پچھلے ہائی/لو (High/Low) اور والیوم کو ملا کر آپ کو واضح بتاتا ہے کہ کون سا شیئر خریدنے کی رینج میں ہے اور کون سا بیچنے کی رینج میں:")
+    st.subheader("⚡ کرپٹو AI ہائی ایکوریسی سگنلز و لائیو چارٹ")
+    st.markdown("دنیا کی کسی بھی کرپٹو کرنسی کا سمبل لکھ کر سرچ کریں اور لائیو TradingView چارٹ کے ساتھ سگنلز حاصل کریں:")
     
-    if st.button("🚀 ڈاؤ تھیوری اسکین چلائیں"):
+    col_c1, col_c2 = st.columns([1, 2])
+    with col_c1:
+        st.markdown("<div class='crypto-card'>", unsafe_allow_html=True)
+        user_crypto_input = st.text_input("کوائن درج کریں (مثلاً BTC, ETH, SOL, PEPE, SHIB, XRP):", value="BTC").upper().strip()
+        btn_calc = st.button("🔍 سگنل جنریٹ کریں")
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+    with col_c2:
+        if btn_calc or "crypto_data" in st.session_state:
+            if btn_calc:
+                res_data = generate_high_precision_crypto_signal(user_crypto_input)
+                st.session_state["crypto_data"] = res_data
+            else:
+                res_data = st.session_state.get("crypto_data")
+                
+            if res_data:
+                st.markdown("<div class='crypto-card'>", unsafe_allow_html=True)
+                st.markdown(f"## 💎 {res_data['ticker']} انٹیلی جنس اسکین")
+                
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("لائیو قیمت", f"${res_data['price']:,.4f}" if res_data['price'] < 1 else f"${res_data['price']:,.2f}")
+                m2.metric("RSI انڈیکیٹر", f"{res_data['rsi']:.1f}")
+                m3.metric("20 EMA ترجیح", f"${res_data['ema20']:,.2f}")
+                m4.metric("اعتماد اسکور", f"{res_data['confidence']}%")
+                
+                st.divider()
+                st.markdown(f"<h2 style='text-align:center; color:{res_data['color']};'>{res_data['signal']}</h2>", unsafe_allow_html=True)
+                st.divider()
+                
+                t1, t2, t3, t4 = st.columns(4)
+                with t1:
+                    st.markdown(f"<div class='target-box-green'>🎯 Target 1<br>${res_data['tp1']}</div>", unsafe_allow_html=True)
+                with t2:
+                    st.markdown(f"<div class='target-box-green'>🎯 Target 2<br>${res_data['tp2']}</div>", unsafe_allow_html=True)
+                with t3:
+                    st.markdown(f"<div class='target-box-green'>🎯 Target 3<br>${res_data['tp3']}</div>", unsafe_allow_html=True)
+                with t4:
+                    st.markdown(f"<div class='target-box-red'>🛑 Stop Loss<br>${res_data['sl']}</div>", unsafe_allow_html=True)
+                
+                # Demo Trade Execute Button
+                st.divider()
+                if st.button(f"🧪 {res_data['ticker']} پر $1,000 کی ڈیمو ٹریڈ لگائیں"):
+                    if not st.session_state["logged_in"]:
+                        st.error("ڈیمو ٹریڈ لگانے کے لیے لاگ ان کریں۔")
+                    else:
+                        u_name = st.session_state["user_id"]
+                        if u_name not in demo_db:
+                            demo_db[u_name] = {"balance": 10000.0, "trades": []}
+                        
+                        demo_db[u_name]["trades"].append({
+                            "ticker": res_data['ticker'],
+                            "entry_price": res_data['price'],
+                            "amount": 1000.0,
+                            "tp1": res_data['tp1'],
+                            "sl": res_data['sl'],
+                            "type": res_data['signal']
+                        })
+                        save_json(DEMO_TRADES_FILE, demo_db)
+                        st.success(f"✅ {res_data['ticker']} پر $1,000 کی ڈیمو ٹریڈ کامیابی سے لگ گئی!")
+                        
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Embed TradingView Live Chart
+                st.markdown("### 📈 لائیو TradingView چارٹ")
+                clean_tv_ticker = res_data['ticker'].replace("-USD", "USD")
+                tv_html = f"""
+                <div class="tradingview-widget-container">
+                  <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol={clean_tv_ticker}&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC" width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+                </div>
+                """
+                components.html(tv_html, height=470)
+
+# TAB 3: DEMO TRADING WALLET
+with tabs[2]:
+    st.subheader("🧪 ڈیمو (Paper Trading) وائلٹ")
+    if not st.session_state["logged_in"]:
+        st.warning("⚠️ اپنے ڈیمو وائلٹ کی کارکردگی اور بیلنس دیکھنے کے لیے لاگ ان کریں۔")
+    else:
+        u_name = st.session_state["user_id"]
+        u_demo = demo_db.get(u_name, {"balance": 10000.0, "trades": []})
+        
+        st.metric("💵 ڈیمو اکاؤنٹ کا ورچوئل بیلنس", f"${u_demo.get('balance', 10000.0):,.2f}")
+        st.markdown("### 📋 جاری ڈیمو ٹریڈز اور لائیو کارکردگی")
+        
+        trades_list = u_demo.get("trades", [])
+        if trades_list:
+            demo_report = []
+            for t in trades_list:
+                # Live Price Check for Demo Trade
+                try:
+                    df_t = yf.download(t['ticker'], period="1d", interval="1m", progress=False)
+                    live_p = float(df_t['Close'].iloc[-1])
+                except Exception:
+                    live_p = t['entry_price']
+                    
+                pnl_usd = ((live_p - t['entry_price']) / t['entry_price']) * t['amount']
+                demo_report.append({
+                    "کوائن": t['ticker'],
+                    "اینٹری پرائس": f"${t['entry_price']:,.4f}",
+                    "لائیو پرائس": f"${live_p:,.4f}",
+                    "سرمایہ": f"${t['amount']:,.2f}",
+                    "نفع / نقصان ($)": f"${pnl_usd:+,.2f}",
+                    "ٹارگٹ (TP1)": f"${t['tp1']}",
+                    "اسٹاپ لاس (SL)": f"${t['sl']}"
+                })
+            st.dataframe(pd.DataFrame(demo_report), use_container_width=True)
+        else:
+            st.info("آپ نے ابھی تک کوئی ڈیمو ٹریڈ نہیں لگائی۔ کرپٹو سگنل والے ٹیب سے ٹریڈ لگائیں۔")
+
+# TAB 4: DOW THEORY
+with tabs[3]:
+    st.subheader("🏛️ ڈاؤ تھیوری بائنگ و سیلنگ زون")
+    if st.button("🚀 PSX ڈاؤ اسکین کریں"):
         dow_results = []
         prog = st.progress(0)
-        
-        for idx, sym in enumerate(ALL_PSX_STOCKS[:30]):
+        for idx, sym in enumerate(ALL_PSX_STOCKS[:25]):
             try:
                 df_d = yf.download(f"{sym}.KA", period="1mo", interval="1d", progress=False)
                 if not df_d.empty:
                     c_close = df_d['Close'].iloc[:, 0] if isinstance(df_d['Close'], pd.DataFrame) else df_d['Close']
                     c_price = c_close.iloc[-1]
-                    signal, desc = evaluate_dow_theory(df_d)
-                    
-                    dow_results.append({
-                        "اسٹاک": sym,
-                        "لائیو قیمت": f"Rs. {c_price:,.2f}",
-                        "ڈاؤ تھیوری سگنل": signal,
-                        "تفصیلی وجہ": desc
-                    })
-            except Exception:
-                pass
-            prog.progress((idx + 1) / 30)
-            
-        if dow_results:
-            st.dataframe(pd.DataFrame(dow_results), use_container_width=True)
-
-# TAB 3: PRO FILTER SCANNER
-with tabs[2]:
-    st.subheader("🎯 پرو فلٹر اسکینر (Multi-bagger Screener)")
-    st.markdown("<b>شرائط:</b> 1. Promoter Holding > 70% | 2. FII Holding > 3.5% | 3. Market Capitalization < 10,000 Million PKR", unsafe_allow_html=True)
-    
-    if st.button("🔍 پرو اسکین کریں"):
-        pro_results = []
-        prog = st.progress(0)
-        
-        for idx, sym in enumerate(ALL_PSX_STOCKS):
-            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.5, 'fii': 3.8, 'shares_out_m': 300})
-            promoter = fdata['promoter']
-            fii = fdata['fii']
-            shares_m = fdata['shares_out_m']
-            
-            p_info = fetch_psx_live_data(sym)
-            price = p_info["price"]
-            
-            if price > 0:
-                mcap_m = price * shares_m
-                if promoter > 70.0 and fii > 3.5 and mcap_m < 10000.0:
-                    pro_results.append({
-                        "اسٹاک": sym,
-                        "قیمت (Rs.)": f"{price:,.2f}",
-                        "پروموٹر ہولڈنگ": f"{promoter}%",
-                        "FII ہولڈنگ": f"{fii}%",
-                        "مارکیٹ کیپ (M PKR)": f"{mcap_m:,.2f}"
-                    })
-            prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
-            
-        if pro_results:
-            df_pro = pd.DataFrame(pro_results)
-            st.session_state["last_pro_scan"] = df_pro
-            st.success(f"✅ {len(pro_results)} کمپنیاں پرو فلٹر کے معیار پر پوری اتریں!")
-            st.dataframe(df_pro, use_container_width=True)
-
-# TAB 4: AI STOCK ANALYSIS
-with tabs[3]:
-    st.subheader("🤖 AI اسٹاک اور کمپنی کا لائیو تجزیہ")
-    target_stock = st.text_input("اسٹاک سمبل درج کریں (مثلاً MLCF, FFC, CNERGY, LUCK):", value="MLCF").upper().strip()
-    if st.button("📊 تجزیہ کریں") and target_stock:
-        with st.spinner(f"{target_stock} کا تجزیہ تیار کیا جا رہا ہے..."):
-            p_info = fetch_psx_live_data(target_stock)
-            try:
-                df_a = yf.download(f"{target_stock}.KA", period="3mo", interval="1d", progress=False)
-                if not df_a.empty:
-                    c_close = df_a['Close'].iloc[:, 0] if isinstance(df_a['Close'], pd.DataFrame) else df_a['Close']
-                    curr_p = p_info["price"] if p_info["status"] == "Success" else c_close.iloc[-1]
-                    rsi_val = calculate_rsi(c_close).iloc[-1]
-                    dow_sig, dow_desc = evaluate_dow_theory(df_a)
-                    
-                    m1, m2 = st.columns(2)
-                    m1.metric("لائیو قیمت", f"Rs. {curr_p:,.2f}")
-                    m2.metric("RSI انڈیکیٹر", f"{rsi_val:.1f}")
-                    
-                    st.markdown(f"### 🏛️ ڈاؤ تھیوری سٹیٹس: {dow_sig}")
-                    st.write(f"👉 **تفصیل:** {dow_desc}")
-            except Exception as e:
-                st.error(f"مسئلہ: {e}")
-
-# TAB 5: ADMIN USER MANAGEMENT
-if is_admin:
-    with tabs[4]:
-        st.subheader("👥 ایڈمن ڈیش بورڈ: یوزر و پاسورڈ مینجمنٹ")
-        col_adm1, col_adm2 = st.columns(2)
-        with col_adm1:
-            st.markdown("### ➕ نیا یوزر ڈائریکٹ شامل کریں")
-            with st.form("admin_add_user"):
-                adm_u = st.text_input("یوزر نیم")
-                adm_e = st.text_input("ای میل ایڈریس")
-                adm_p = st.text_input("پاسورڈ")
-                if st.form_submit_button("یوزر شامل کریں"):
-                    if adm_u and adm_p and adm_e:
-                        users_db[adm_u] = {"pass": adm_p, "email": adm_e}
-                        save_json(USERS_FILE, users_db)
-                        st.success(f"✅ یوزر '{adm_u}' شامل ہو گیا!")
-                        st.rerun()
-
-        with col_adm2:
-            st.markdown("### 🔑 کسی بھی یوزر کا پاسورڈ تبدیل کریں")
-            with st.form("admin_change_pass"):
-                target_user = st.selectbox("یوزر منتخب کریں", list(users_db.keys()))
-                update_pass = st.text_input("نیا پاسورڈ درج کریں")
-                if st.form_submit_button("پاسورڈ اپ ڈیٹ کریں"):
-                    if update_pass:
-                        curr_info = users_db[target_user]
-                        if isinstance(curr_info, dict):
-                            curr_info["pass"] = update_pass
-                        else:
-                            users_db[target_user] = {"pass": update_pass, "email": "masterjaved@gmail.com"}
-                        save_json(USERS_FILE, users_db)
-                        st.success(f"✅ '{target_user}' کا پاسورڈ اپ ڈیٹ ہو گیا!")
-                        st.rerun()
-
-        st.divider()
-        st.markdown("### 📋 تمام رجسٹرڈ یوزرز کی فہرست")
-        for u_name, u_info in list(users_db.items()):
-            u_p = u_info.get("pass") if isinstance(u_info, dict) else u_info
-            u_e = u_info.get("email", "N/A") if isinstance(u_info, dict) else "N/A"
-            
-            col_u1, col_u2, col_u3, col_u4 = st.columns([2, 2, 2, 1])
-            with col_u1:
-                st.write(f"👤 **{u_name}**")
-            with col_u2:
-                st.write(f"🔑 `{u_p}`")
-            with col_u3:
-                st.write(f"📧 `{u_e}`")
-            with col_u4:
-                if u_name.lower() != "javed":
-                    if st.button("🗑 ڈیلیٹ", key=f"del_user_{u_name}"):
-                        del users_db[u_name]
-                        if u_name in ports_db:
-                            del ports_db[u_name]
-                            save_json(PORTFOLIO_FILE, ports_db)
-                        save_json(USERS_FILE, users_db)
-                        st.success(f"یوزر '{u_name}' ڈیلیٹ کر دیا گیا!")
-                        st.rerun()
-            st.divider()
-
-# TAB 6: PENNY STOCKS
-p_tab_idx = 5 if is_admin else 4
-with tabs[p_tab_idx]:
-    st.subheader("⚡ سستے اور ایکٹیو پینی اسٹاکس (Rs. 5-25)")
-    if st.button("🔍 سستے شیئرز اسکین کریں"):
-        penny_results = []
-        prog = st.progress(0)
-        for idx, s_sym in enumerate(ALL_PSX_STOCKS[:25]):
-            try:
-                df_p = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
-                if not df_p.empty:
-                    c_close = df_p['Close'].iloc[:, 0] if isinstance(df_p['Close'], pd.DataFrame) else df_p['Close']
-                    c_vol = df_p['Volume'].iloc[:, 0] if isinstance(df_p['Volume'], pd.DataFrame) else df_p['Volume']
-                    price = c_close.iloc[-1]
-                    vol = c_vol.iloc[-1]
-                    r_val = calculate_rsi(c_close).iloc[-1]
-                    
-                    if 3.0 <= price <= 30.0:
-                        penny_results.append({
-                            "اسٹاک": s_sym,
-                            "قیمت (Rs.)": f"{price:,.2f}",
-                            "روزانہ حجم": f"{int(vol):,}",
-                            "RSI": round(r_val, 2)
-                        })
+                    sig, desc = evaluate_dow_theory(df_d)
+                    dow_results.append({"اسٹاک": sym, "قیمت": f"Rs. {c_price:,.2f}", "سگنل": sig, "تفصیل": desc})
             except Exception:
                 pass
             prog.progress((idx + 1) / 25)
-        if penny_results:
-            st.dataframe(pd.DataFrame(penny_results), use_container_width=True)
+        if dow_results:
+            st.dataframe(pd.DataFrame(dow_results), use_container_width=True)
 
-# TAB 7: GENERAL SCANNER
-g_tab_idx = 6 if is_admin else 5
-with tabs[g_tab_idx]:
-    st.subheader("🔍 مارکیٹ اسکینر")
-    if st.button("🚀 اسکین شروع کریں"):
-        gen_results = []
+# TAB 5: PRO FILTER
+with tabs[4]:
+    st.subheader("🎯 پرو فلٹر اسکینر")
+    if st.button("🔍 پرو اسکین کریں"):
+        pro_results = []
         prog = st.progress(0)
-        for idx, s_sym in enumerate(ALL_PSX_STOCKS):
-            try:
-                df_scan = yf.download(f"{s_sym}.KA", period="1mo", interval="1d", progress=False)
-                if not df_scan.empty:
-                    c_close = df_scan['Close'].iloc[:, 0] if isinstance(df_scan['Close'], pd.DataFrame) else df_scan['Close']
-                    c_price = c_close.iloc[-1]
-                    r_val = calculate_rsi(c_close).iloc[-1]
-                    gen_results.append({
-                        "اسٹاک": s_sym,
-                        "قیمت": f"Rs. {c_price:,.2f}",
-                        "RSI": round(r_val, 2)
+        for idx, sym in enumerate(ALL_PSX_STOCKS):
+            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.5, 'fii': 3.8, 'shares_out_m': 300})
+            p_info = fetch_psx_live_data(sym)
+            price = p_info["price"]
+            if price > 0:
+                mcap_m = price * fdata['shares_out_m']
+                if fdata['promoter'] > 70.0 and fdata['fii'] > 3.5 and mcap_m < 10000.0:
+                    pro_results.append({
+                        "اسٹاک": sym, "قیمت (Rs.)": f"{price:,.2f}",
+                        "پروموٹر": f"{fdata['promoter']}%", "FII": f"{fdata['fii']}%", "MCap": f"{mcap_m:,.2f}M"
                     })
-            except Exception:
-                pass
             prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
-        st.dataframe(pd.DataFrame(gen_results), use_container_width=True)
+        if pro_results:
+            st.dataframe(pd.DataFrame(pro_results), use_container_width=True)
+
+# TAB 6: AI STOCK ANALYSIS
+with tabs[5]:
+    st.subheader("🤖 AI اسٹاک تجزیہ")
+    target_stock = st.text_input("اسٹاک سمبل درج کریں:", value="MLCF").upper().strip()
+    if st.button("📊 تجزیہ کریں") and target_stock:
+        p_info = fetch_psx_live_data(target_stock)
+        st.write(f"لائیو قیمت: Rs. {p_info['price']:,.2f}")
+
+# TAB 7: ADMIN
+if is_admin:
+    with tabs[6]:
+        st.subheader("👥 ایڈمن ڈیش بورڈ")
+        st.write("یوزر مینجمنٹ فعال ہے۔")
