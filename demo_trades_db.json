@@ -1,0 +1,15 @@
+{
+    "javed": {
+        "balance": 10000.0,
+        "trades": [
+            {
+                "ticker": "BGB-USD",
+                "entry_price": 1.9474495649337769,
+                "amount": 1000.0,
+                "tp1": 2.0,
+                "sl": 1.88,
+                "type": "🟢 BUY (خریداری کا زون)"
+            }
+        ]
+    }
+}
