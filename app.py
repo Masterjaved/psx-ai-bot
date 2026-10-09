@@ -10,9 +10,10 @@ from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
 import yfinance as yf
 import streamlit.components.v1 as components
+import time
 
 st.set_page_config(
-    page_title="PSX & Crypto Precision Engine",
+    page_title="PSX & Crypto Institutional Precision Engine",
     page_icon="🏛️",
     layout="wide"
 )
@@ -73,7 +74,21 @@ if "javed" not in users_db:
 ports_db = load_json(PORTFOLIO_FILE, {})
 demo_db = load_json(DEMO_TRADES_FILE, {})
 
-# Premium Dark Styling
+# Persistent Session Persistence (URL Query Params Check)
+query_params = st.query_params
+saved_user = query_params.get("user", "")
+
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "user_id" not in st.session_state:
+    st.session_state["user_id"] = ""
+
+# Auto Auto-Login if Query Param exists
+if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
+    st.session_state["logged_in"] = True
+    st.session_state["user_id"] = saved_user
+
+# Premium Dark CSS
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 18px !important; }
@@ -88,6 +103,10 @@ st.markdown("""
     .crypto-card {
         background: #131B2E; padding: 25px; border-radius: 15px;
         border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    .order-box {
+        background: #1A233A; padding: 20px; border-radius: 12px;
+        border-left: 4px solid #00E676; margin-top: 15px;
     }
     .target-box-green {
         background: #002B1B; border: 1px solid #00E676; padding: 12px;
@@ -164,7 +183,6 @@ def evaluate_dow_theory(df):
     else:
         return "🟡 انتظار کریں (Hold / Neutral)", "قیمت نارمل رینج میں ہے۔ بریک آؤٹ کا انتظار کریں۔"
 
-# High Precision Crypto Signal Generator
 def generate_high_precision_crypto_signal(symbol_ticker):
     try:
         clean_ticker = symbol_ticker.upper().strip()
@@ -187,33 +205,48 @@ def generate_high_precision_crypto_signal(symbol_ticker):
             recent_vol = float(c_vol.iloc[-1])
             avg_vol = float(c_vol.iloc[-15:-1].mean())
             
+            std20 = float(c_close.rolling(window=20).std().iloc[-1])
+            upper_bb = ema20 + (2 * std20)
+            lower_bb = ema20 - (2 * std20)
+            
             atr = float((c_high - c_low).iloc[-14:].mean())
             
             confidence = 75
             sig_type = "🟡 WAIT / NEUTRAL (صبر کریں)"
             sig_color = "#FFB300"
+            rec_dir = "LONG"
             
             if rsi_val < 42 and curr_p > ema20 and recent_vol > avg_vol * 1.2:
-                sig_type = "🟢 STRONG BUY (باقاعدہ سٹرونگ خریدی)"
+                sig_type = "🟢 STRONG BUY / LONG (زبردست خریداری)"
                 sig_color = "#00E676"
-                confidence = 93
-            elif rsi_val < 45 and curr_p > ema50:
-                sig_type = "🟢 BUY (خریداری کا زون)"
+                confidence = 94
+                rec_dir = "LONG"
+            elif rsi_val < 45 and curr_p > lower_bb:
+                sig_type = "🟢 BUY / LONG (خریداری زون)"
                 sig_color = "#00E676"
-                confidence = 85
+                confidence = 86
+                rec_dir = "LONG"
             elif rsi_val > 68 and curr_p < ema20:
-                sig_type = "🔴 STRONG SELL (مکمل فروخت)"
+                sig_type = "🔴 STRONG SHORT / SELL (سٹرونگ فروخت)"
                 sig_color = "#FF1744"
-                confidence = 92
-            elif rsi_val > 65:
-                sig_type = "🔴 SELL (پرافٹ ٹیکنگ)"
+                confidence = 93
+                rec_dir = "SHORT"
+            elif rsi_val > 65 or curr_p > upper_bb:
+                sig_type = "🔴 SHORT / SELL (پرافٹ ٹیکنگ)"
                 sig_color = "#FF1744"
-                confidence = 82
+                confidence = 84
+                rec_dir = "SHORT"
                 
-            tp1 = round(curr_p + (atr * 1.2), 4 if curr_p < 1 else 2)
-            tp2 = round(curr_p + (atr * 2.5), 4 if curr_p < 1 else 2)
-            tp3 = round(curr_p + (atr * 4.0), 4 if curr_p < 1 else 2)
-            sl = round(curr_p - (atr * 1.5), 4 if curr_p < 1 else 2)
+            if rec_dir == "LONG":
+                tp1 = round(curr_p + (atr * 1.2), 4 if curr_p < 1 else 2)
+                tp2 = round(curr_p + (atr * 2.5), 4 if curr_p < 1 else 2)
+                tp3 = round(curr_p + (atr * 4.0), 4 if curr_p < 1 else 2)
+                sl = round(curr_p - (atr * 1.5), 4 if curr_p < 1 else 2)
+            else:
+                tp1 = round(curr_p - (atr * 1.2), 4 if curr_p < 1 else 2)
+                tp2 = round(curr_p - (atr * 2.5), 4 if curr_p < 1 else 2)
+                tp3 = round(curr_p - (atr * 4.0), 4 if curr_p < 1 else 2)
+                sl = round(curr_p + (atr * 1.5), 4 if curr_p < 1 else 2)
             
             return {
                 "ticker": clean_ticker,
@@ -223,18 +256,14 @@ def generate_high_precision_crypto_signal(symbol_ticker):
                 "confidence": confidence,
                 "signal": sig_type,
                 "color": sig_color,
+                "direction": rec_dir,
                 "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl
             }
     except Exception:
         pass
     return None
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و ہائی ایکوریسی کرپٹو پورٹل</h1></div>", unsafe_allow_html=True)
-
-if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-if "user_id" not in st.session_state:
-    st.session_state["user_id"] = ""
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و پرو کرپٹو ٹریڈنگ ڈیش بورڈ</h1></div>", unsafe_allow_html=True)
 
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
 
@@ -252,6 +281,7 @@ if not st.session_state["logged_in"]:
             if u_matched and users_db[u_matched].get("pass") == p_input:
                 st.session_state["logged_in"] = True
                 st.session_state["user_id"] = u_matched
+                st.query_params["user"] = u_matched  # Persist in URL
                 st.sidebar.success(f"خوش آمدید {u_matched}!")
                 st.rerun()
             else:
@@ -269,12 +299,13 @@ else:
     if st.sidebar.button("لاگ آؤٹ"):
         st.session_state["logged_in"] = False
         st.session_state["user_id"] = ""
+        st.query_params.clear()  # Clear persisted state
         st.rerun()
 
 curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
-tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ کرپٹو AI سگنلز", "🧪 ڈیمو ٹریڈنگ وائلٹ", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ"]
+tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ کرپٹو AI سگنلز", "🧪 ڈیمو ٹریڈنگ وائلٹ (Binance Mode)", "🏛️ ڈاؤ تھیوری بائے/سیل زون", "🎯 پرو فلٹر اسکینر", "🤖 AI اسٹاک تجزیہ"]
 if is_admin:
     tab_list.append("👥 یوزر مینجمنٹ (ایڈمن)")
 
@@ -329,16 +360,14 @@ with tabs[0]:
                         save_json(PORTFOLIO_FILE, ports_db)
                         st.rerun()
 
-# TAB 2: CRYPTO SIGNALS + TRADINGVIEW CHART
+# TAB 2: CRYPTO SIGNALS
 with tabs[1]:
-    st.subheader("⚡ کرپٹو AI ہائی ایکوریسی سگنلز و لائیو چارٹ")
-    st.markdown("دنیا کی کسی بھی کرپٹو کرنسی کا سمبل لکھ کر سرچ کریں اور لائیو TradingView چارٹ کے ساتھ سگنلز حاصل کریں:")
-    
+    st.subheader("⚡ کرپٹو AI سگنلز و پرو ٹریڈنگ ارڈر پینل")
     col_c1, col_c2 = st.columns([1, 2])
     with col_c1:
         st.markdown("<div class='crypto-card'>", unsafe_allow_html=True)
         user_crypto_input = st.text_input("کوائن درج کریں (مثلاً BTC, ETH, SOL, PEPE, SHIB, XRP):", value="BTC").upper().strip()
-        btn_calc = st.button("🔍 سگنل جنریٹ کریں")
+        btn_calc = st.button("🔍 سگنل تجزیہ کریں")
         st.markdown("</div>", unsafe_allow_html=True)
         
     with col_c2:
@@ -372,76 +401,67 @@ with tabs[1]:
                     st.markdown(f"<div class='target-box-green'>🎯 Target 3<br>${res_data['tp3']}</div>", unsafe_allow_html=True)
                 with t4:
                     st.markdown(f"<div class='target-box-red'>🛑 Stop Loss<br>${res_data['sl']}</div>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Demo Trade Execute Button
-                st.divider()
-                if st.button(f"🧪 {res_data['ticker']} پر $1,000 کی ڈیمو ٹریڈ لگائیں"):
+                st.markdown("<div class='order-box'>", unsafe_allow_html=True)
+                st.markdown("### 🏦 بینانس اسٹائل ڈیمو آرڈر فارم")
+                col_o1, col_o2, col_o3 = st.columns(3)
+                with col_o1:
+                    ord_type = st.selectbox("آرڈر کی قسم:", ["MARKET (لائیو قیمت)", "LIMIT (پینڈنگ آرڈر)"])
+                with col_o2:
+                    ord_dir = st.selectbox("پوزیشن کی سمت:", ["🟢 LONG (خریدیں - اپ ٹرینڈ)", "🔴 SHORT (بیچیں - ڈاؤن ٹرینڈ)"])
+                with col_o3:
+                    ord_amt = st.number_input("سرمایہ ($ USD)", min_value=10, value=1000, step=50)
+                    
+                col_o4, col_o5 = st.columns(2)
+                with col_o4:
+                    custom_entry = st.number_input("اینٹری پرائس ($)", value=float(res_data['price']), format="%.4f")
+                with col_o5:
+                    custom_sl = st.number_input("اسٹاپ لاس ($ SL)", value=float(res_data['sl']), format="%.4f")
+                    
+                if st.button(f"🚀 {res_data['ticker']} ڈیمو آرڈر بھیجیں"):
                     if not st.session_state["logged_in"]:
-                        st.error("ڈیمو ٹریڈ لگانے کے لیے لاگ ان کریں۔")
+                        st.error("آرڈر لگانے کے لیے لاگ ان کریں۔")
                     else:
                         u_name = st.session_state["user_id"]
                         if u_name not in demo_db:
                             demo_db[u_name] = {"balance": 10000.0, "trades": []}
+                        is_limit = ("LIMIT" in ord_type)
+                        clean_dir = "LONG" if "LONG" in ord_dir else "SHORT"
                         
                         demo_db[u_name]["trades"].append({
+                            "id": int(time.time()),
                             "ticker": res_data['ticker'],
-                            "entry_price": res_data['price'],
-                            "amount": 1000.0,
+                            "entry_price": float(custom_entry),
+                            "amount": float(ord_amt),
                             "tp1": res_data['tp1'],
-                            "sl": res_data['sl'],
-                            "type": res_data['signal']
+                            "sl": float(custom_sl),
+                            "direction": clean_dir,
+                            "order_type": "LIMIT" if is_limit else "MARKET",
+                            "status": "PENDING" if is_limit else "OPEN"
                         })
                         save_json(DEMO_TRADES_FILE, demo_db)
-                        st.success(f"✅ {res_data['ticker']} پر $1,000 کی ڈیمو ٹریڈ کامیابی سے لگ گئی!")
-                        
+                        st.success(f"✅ {res_data['ticker']} ڈیمو آرڈر کامیابی سے لگ گیا!")
                 st.markdown("</div>", unsafe_allow_html=True)
-                
-                # Embed TradingView Live Chart
-                st.markdown("### 📈 لائیو TradingView چارٹ")
-                clean_tv_ticker = res_data['ticker'].replace("-USD", "USD")
-                tv_html = f"""
-                <div class="tradingview-widget-container">
-                  <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol={clean_tv_ticker}&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC" width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
-                </div>
-                """
-                components.html(tv_html, height=470)
 
-# TAB 3: DEMO TRADING WALLET
+# TAB 3: DEMO WALLET
 with tabs[2]:
     st.subheader("🧪 ڈیمو (Paper Trading) وائلٹ")
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ اپنے ڈیمو وائلٹ کی کارکردگی اور بیلنس دیکھنے کے لیے لاگ ان کریں۔")
+        st.warning("⚠️ ڈیمو اکاؤنٹ کے لیے لاگ ان کریں۔")
     else:
         u_name = st.session_state["user_id"]
         u_demo = demo_db.get(u_name, {"balance": 10000.0, "trades": []})
+        all_trades = u_demo.get("trades", [])
         
-        st.metric("💵 ڈیمو اکاؤنٹ کا ورچوئل بیلنس", f"${u_demo.get('balance', 10000.0):,.2f}")
-        st.markdown("### 📋 جاری ڈیمو ٹریڈز اور لائیو کارکردگی")
+        closed_trades = [t for t in all_trades if t.get("status") == "CLOSED"]
+        winning_trades = [t for t in closed_trades if t.get("pnl", 0) > 0]
+        win_rate = (len(winning_trades) / len(closed_trades) * 100) if closed_trades else 100.0
         
-        trades_list = u_demo.get("trades", [])
-        if trades_list:
-            demo_report = []
-            for t in trades_list:
-                # Live Price Check for Demo Trade
-                try:
-                    df_t = yf.download(t['ticker'], period="1d", interval="1m", progress=False)
-                    live_p = float(df_t['Close'].iloc[-1])
-                except Exception:
-                    live_p = t['entry_price']
-                    
-                pnl_usd = ((live_p - t['entry_price']) / t['entry_price']) * t['amount']
-                demo_report.append({
-                    "کوائن": t['ticker'],
-                    "اینٹری پرائس": f"${t['entry_price']:,.4f}",
-                    "لائیو پرائس": f"${live_p:,.4f}",
-                    "سرمایہ": f"${t['amount']:,.2f}",
-                    "نفع / نقصان ($)": f"${pnl_usd:+,.2f}",
-                    "ٹارگٹ (TP1)": f"${t['tp1']}",
-                    "اسٹاپ لاس (SL)": f"${t['sl']}"
-                })
-            st.dataframe(pd.DataFrame(demo_report), use_container_width=True)
-        else:
-            st.info("آپ نے ابھی تک کوئی ڈیمو ٹریڈ نہیں لگائی۔ کرپٹو سگنل والے ٹیب سے ٹریڈ لگائیں۔")
+        w1, w2, w3 = st.columns(3)
+        w1.metric("💵 ورچوئل بیلنس", f"${u_demo.get('balance', 10000.0):,.2f}")
+        w2.metric("🎯 باٹ ون-ریٹ (Win Rate)", f"{win_rate:.1f}%")
+        w3.metric("📊 کل بند شدہ ٹریڈز", f"{len(closed_trades)}")
 
 # TAB 4: DOW THEORY
 with tabs[3]:
