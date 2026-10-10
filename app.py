@@ -74,7 +74,7 @@ if "javed" not in users_db:
 ports_db = load_json(PORTFOLIO_FILE, {})
 demo_db = load_json(DEMO_TRADES_FILE, {})
 
-# Persistent Session Persistence (URL Query Params Check)
+# Persistent Session Persistence
 query_params = st.query_params
 saved_user = query_params.get("user", "")
 
@@ -83,12 +83,11 @@ if "logged_in" not in st.session_state:
 if "user_id" not in st.session_state:
     st.session_state["user_id"] = ""
 
-# Auto Auto-Login if Query Param exists
 if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
     st.session_state["logged_in"] = True
     st.session_state["user_id"] = saved_user
 
-# Premium Dark CSS
+# Premium Binance Dark Styling
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 18px !important; }
@@ -104,9 +103,9 @@ st.markdown("""
         background: #131B2E; padding: 25px; border-radius: 15px;
         border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
     }
-    .order-box {
-        background: #1A233A; padding: 20px; border-radius: 12px;
-        border-left: 4px solid #00E676; margin-top: 15px;
+    .binance-order-panel {
+        background: #182232; padding: 20px; border-radius: 12px;
+        border: 2px solid #2B394A; margin-top: 20px;
     }
     .target-box-green {
         background: #002B1B; border: 1px solid #00E676; padding: 12px;
@@ -281,7 +280,7 @@ if not st.session_state["logged_in"]:
             if u_matched and users_db[u_matched].get("pass") == p_input:
                 st.session_state["logged_in"] = True
                 st.session_state["user_id"] = u_matched
-                st.query_params["user"] = u_matched  # Persist in URL
+                st.query_params["user"] = u_matched
                 st.sidebar.success(f"خوش آمدید {u_matched}!")
                 st.rerun()
             else:
@@ -299,7 +298,7 @@ else:
     if st.sidebar.button("لاگ آؤٹ"):
         st.session_state["logged_in"] = False
         st.session_state["user_id"] = ""
-        st.query_params.clear()  # Clear persisted state
+        st.query_params.clear()
         st.rerun()
 
 curr_user = st.session_state["user_id"]
@@ -360,13 +359,13 @@ with tabs[0]:
                         save_json(PORTFOLIO_FILE, ports_db)
                         st.rerun()
 
-# TAB 2: CRYPTO SIGNALS
+# TAB 2: CRYPTO SIGNALS & BINANCE ORDER EXECUTION PANEL
 with tabs[1]:
     st.subheader("⚡ کرپٹو AI سگنلز و پرو ٹریڈنگ ارڈر پینل")
     col_c1, col_c2 = st.columns([1, 2])
     with col_c1:
         st.markdown("<div class='crypto-card'>", unsafe_allow_html=True)
-        user_crypto_input = st.text_input("کوائن درج کریں (مثلاً BTC, ETH, SOL, PEPE, SHIB, XRP):", value="BTC").upper().strip()
+        user_crypto_input = st.text_input("کوائن درج کریں (مثلاً BTC, ETH, SOL, PEPE, SHIB, XRP, BNB):", value="BNB").upper().strip()
         btn_calc = st.button("🔍 سگنل تجزیہ کریں")
         st.markdown("</div>", unsafe_allow_html=True)
         
@@ -403,52 +402,88 @@ with tabs[1]:
                     st.markdown(f"<div class='target-box-red'>🛑 Stop Loss<br>${res_data['sl']}</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                st.markdown("<div class='order-box'>", unsafe_allow_html=True)
-                st.markdown("### 🏦 بینانس اسٹائل ڈیمو آرڈر فارم")
+                # Full Binance Order Execution Box
+                st.markdown("<div class='binance-order-panel'>", unsafe_allow_html=True)
+                st.markdown("### 🏦 بینانس اسٹائل ڈیمو آرڈر ایگزیکیوشن")
+                
                 col_o1, col_o2, col_o3 = st.columns(3)
                 with col_o1:
-                    ord_type = st.selectbox("آرڈر کی قسم:", ["MARKET (لائیو قیمت)", "LIMIT (پینڈنگ آرڈر)"])
+                    ord_type = st.selectbox("آرڈر ٹائپ:", ["MARKET (لائیو قیمت)", "LIMIT (پینڈنگ آرڈر)"])
                 with col_o2:
-                    ord_dir = st.selectbox("پوزیشن کی سمت:", ["🟢 LONG (خریدیں - اپ ٹرینڈ)", "🔴 SHORT (بیچیں - ڈاؤن ٹرینڈ)"])
+                    ord_dir = st.selectbox("پوزیشن کی سمت:", ["🟢 LONG / BUY (خریدیں)", "🔴 SHORT / SELL (بیچیں)"])
                 with col_o3:
                     ord_amt = st.number_input("سرمایہ ($ USD)", min_value=10, value=1000, step=50)
                     
-                col_o4, col_o5 = st.columns(2)
+                col_o4, col_o5, col_o6 = st.columns(3)
                 with col_o4:
-                    custom_entry = st.number_input("اینٹری پرائس ($)", value=float(res_data['price']), format="%.4f")
+                    custom_entry = st.number_input("اینٹری پرائس ($ Entry)", value=float(res_data['price']), format="%.4f")
                 with col_o5:
+                    custom_tp = st.number_input("ٹارگٹ پرائس ($ TP1)", value=float(res_data['tp1']), format="%.4f")
+                with col_o6:
                     custom_sl = st.number_input("اسٹاپ لاس ($ SL)", value=float(res_data['sl']), format="%.4f")
                     
-                if st.button(f"🚀 {res_data['ticker']} ڈیمو آرڈر بھیجیں"):
-                    if not st.session_state["logged_in"]:
-                        st.error("آرڈر لگانے کے لیے لاگ ان کریں۔")
-                    else:
-                        u_name = st.session_state["user_id"]
-                        if u_name not in demo_db:
-                            demo_db[u_name] = {"balance": 10000.0, "trades": []}
-                        is_limit = ("LIMIT" in ord_type)
-                        clean_dir = "LONG" if "LONG" in ord_dir else "SHORT"
-                        
-                        demo_db[u_name]["trades"].append({
-                            "id": int(time.time()),
-                            "ticker": res_data['ticker'],
-                            "entry_price": float(custom_entry),
-                            "amount": float(ord_amt),
-                            "tp1": res_data['tp1'],
-                            "sl": float(custom_sl),
-                            "direction": clean_dir,
-                            "order_type": "LIMIT" if is_limit else "MARKET",
-                            "status": "PENDING" if is_limit else "OPEN"
-                        })
-                        save_json(DEMO_TRADES_FILE, demo_db)
-                        st.success(f"✅ {res_data['ticker']} ڈیمو آرڈر کامیابی سے لگ گیا!")
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    if st.button(f"🟢 BUY / LONG آرڈر لگائیں (${ord_amt})", use_container_width=True):
+                        if not st.session_state["logged_in"]:
+                            st.error("آرڈر لگانے کے لیے لاگ ان کریں۔")
+                        else:
+                            u_name = st.session_state["user_id"]
+                            if u_name not in demo_db:
+                                demo_db[u_name] = {"balance": 10000.0, "trades": []}
+                            is_limit = ("LIMIT" in ord_type)
+                            demo_db[u_name]["trades"].append({
+                                "id": int(time.time()),
+                                "ticker": res_data['ticker'],
+                                "entry_price": float(custom_entry),
+                                "amount": float(ord_amt),
+                                "tp1": float(custom_tp),
+                                "sl": float(custom_sl),
+                                "direction": "LONG",
+                                "order_type": "LIMIT" if is_limit else "MARKET",
+                                "status": "PENDING" if is_limit else "OPEN"
+                            })
+                            save_json(DEMO_TRADES_FILE, demo_db)
+                            st.success(f"✅ {res_data['ticker']} LONG آرڈر کامیابی سے فعال ہو گیا!")
+                            
+                with col_btn2:
+                    if st.button(f"🔴 SHORT / SELL آرڈر لگائیں (${ord_amt})", use_container_width=True):
+                        if not st.session_state["logged_in"]:
+                            st.error("آرڈر لگانے کے لیے لاگ ان کریں۔")
+                        else:
+                            u_name = st.session_state["user_id"]
+                            if u_name not in demo_db:
+                                demo_db[u_name] = {"balance": 10000.0, "trades": []}
+                            is_limit = ("LIMIT" in ord_type)
+                            demo_db[u_name]["trades"].append({
+                                "id": int(time.time()),
+                                "ticker": res_data['ticker'],
+                                "entry_price": float(custom_entry),
+                                "amount": float(ord_amt),
+                                "tp1": float(custom_tp),
+                                "sl": float(custom_sl),
+                                "direction": "SHORT",
+                                "order_type": "LIMIT" if is_limit else "MARKET",
+                                "status": "PENDING" if is_limit else "OPEN"
+                            })
+                            save_json(DEMO_TRADES_FILE, demo_db)
+                            st.success(f"✅ {res_data['ticker']} SHORT آرڈر کامیابی سے فعال ہو گیا!")
                 st.markdown("</div>", unsafe_allow_html=True)
+                
+                st.markdown("### 📈 لائیو TradingView چارٹ")
+                clean_tv_ticker = res_data['ticker'].replace("-USD", "USD")
+                tv_html = f"""
+                <div class="tradingview-widget-container">
+                  <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol={clean_tv_ticker}&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC" width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+                </div>
+                """
+                components.html(tv_html, height=470)
 
-# TAB 3: DEMO WALLET
+# TAB 3: DEMO WALLET & LIVE CLOSE POSITION BUTTONS
 with tabs[2]:
-    st.subheader("🧪 ڈیمو (Paper Trading) وائلٹ")
+    st.subheader("🧪 ڈیمو (Paper Trading) وائلٹ اور لائیو آرڈر بک")
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ ڈیمو اکاؤنٹ کے لیے لاگ ان کریں۔")
+        st.warning("⚠️ ڈیمو اکاؤنٹ کا جائزہ لینے کے لیے لاگ ان کریں۔")
     else:
         u_name = st.session_state["user_id"]
         u_demo = demo_db.get(u_name, {"balance": 10000.0, "trades": []})
@@ -462,6 +497,51 @@ with tabs[2]:
         w1.metric("💵 ورچوئل بیلنس", f"${u_demo.get('balance', 10000.0):,.2f}")
         w2.metric("🎯 باٹ ون-ریٹ (Win Rate)", f"{win_rate:.1f}%")
         w3.metric("📊 کل بند شدہ ٹریڈز", f"{len(closed_trades)}")
+        
+        st.divider()
+        auto_ref = st.checkbox("🔄 لائیو پوزیشنز آٹو ریفریش (Auto Refresh 5s)", value=False)
+        
+        # OPEN TRADES WITH CLOSE BUTTONS
+        st.markdown("### ⚡ جاری (OPEN) پوزیشنز")
+        open_trades = [t for t in all_trades if t.get("status") == "OPEN"]
+        
+        if open_trades:
+            for t in open_trades:
+                try:
+                    df_t = yf.download(t['ticker'], period="1d", interval="1m", progress=False)
+                    live_p = float(df_t['Close'].iloc[-1])
+                except Exception:
+                    live_p = t['entry_price']
+                    
+                dir_factor = 1 if t.get('direction', 'LONG') == "LONG" else -1
+                pnl_usd = ((live_p - t['entry_price']) / t['entry_price']) * t['amount'] * dir_factor
+                pnl_color = "#00E676" if pnl_usd >= 0 else "#FF1744"
+                
+                col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 2])
+                with col1:
+                    st.markdown(f"**{t['ticker']}** (`{t.get('direction', 'LONG')}`)")
+                with col2:
+                    st.write(f"اینٹری: `${t['entry_price']:,.4f}` | لائیو: `${live_p:,.4f}`")
+                with col3:
+                    st.write(f"سرمایہ: `${t['amount']:,.2f}`")
+                with col4:
+                    st.markdown(f"PnL: <span style='color:{pnl_color};font-weight:bold;'>${pnl_usd:+,.2f}</span>", unsafe_allow_html=True)
+                with col5:
+                    if st.button("🔴 کلوز پوزیشن (Sell)", key=f"close_{t['id']}"):
+                        t["status"] = "CLOSED"
+                        t["close_price"] = live_p
+                        t["pnl"] = pnl_usd
+                        u_demo["balance"] += (t['amount'] + pnl_usd)
+                        save_json(DEMO_TRADES_FILE, demo_db)
+                        st.success(f"✅ پوزیشن کلوز ہو گئی! PnL: ${pnl_usd:+,.2f}")
+                        st.rerun()
+                st.divider()
+        else:
+            st.info("کوئی اوپن پوزیشن موجود نہیں ہے۔")
+            
+        if auto_ref:
+            time.sleep(5)
+            st.rerun()
 
 # TAB 4: DOW THEORY
 with tabs[3]:
