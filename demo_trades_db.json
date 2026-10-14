@@ -1,6 +1,6 @@
 {
     "javed": {
-        "balance": 10000.0,
+        "balance": 11000.0,
         "trades": [
             {
                 "ticker": "BGB-USD",
@@ -27,7 +27,9 @@
                 "sl": 78811.65,
                 "direction": "SHORT",
                 "order_type": "MARKET",
-                "status": "OPEN"
+                "status": "CLOSED",
+                "close_price": 81965.359375,
+                "pnl": -0.0
             }
         ]
     }
