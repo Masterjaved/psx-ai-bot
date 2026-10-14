@@ -17,6 +17,17 @@
                 "tp1": 84774.14,
                 "sl": 79719.82,
                 "type": "🟢 BUY (خریداری کا زون)"
+            },
+            {
+                "id": 1791991195,
+                "ticker": "BTC-USD",
+                "entry_price": 81965.359375,
+                "amount": 1000.0,
+                "tp1": 84488.32,
+                "sl": 78811.65,
+                "direction": "SHORT",
+                "order_type": "MARKET",
+                "status": "OPEN"
             }
         ]
     }
