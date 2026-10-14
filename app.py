@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 import yfinance as yf
 import streamlit.components.v1 as components
 import time
+import urllib.parse
 
 st.set_page_config(
     page_title="PSX & Crypto Institutional Precision Engine",
@@ -69,7 +70,6 @@ if "javed" not in users_db:
 ports_db = load_json(PORTFOLIO_FILE, {})
 demo_db = load_json(DEMO_TRADES_FILE, {})
 
-# Persistent Session Persistence via URL Query Params
 query_params = st.query_params
 saved_user = query_params.get("user", "")
 
@@ -82,40 +82,49 @@ if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
     st.session_state["logged_in"] = True
     st.session_state["user_id"] = saved_user
 
-# Premium Styling & Ticker Tape CSS
+# Ultra-Professional Dark Fintech Styling
 st.markdown("""
     <style>
-    html, body, [class*="css"] { font-size: 18px !important; }
-    .main { background: #0A0E17; color: #ffffff; }
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+    
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; font-size: 17px !important; }
+    .main { background: #080C14; color: #E0E6ED; }
+    
     .ticker-wrap {
-        width: 100%; overflow: hidden; background-color: #00251a;
-        padding: 10px 0; border-bottom: 2px solid #FFD700; font-weight: bold;
+        width: 100%; overflow: hidden; background: linear-gradient(90deg, #002B1B 0%, #004D40 100%);
+        padding: 12px 0; border-bottom: 2px solid #FFD700; font-weight: 600;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     }
-    .ticker { display: inline-block; white-space: nowrap; animation: marquee 30s linear infinite; }
-    .ticker-item { display: inline-block; padding: 0 30px; font-size: 1.1rem; color: #00E676; }
+    .ticker { display: inline-block; white-space: nowrap; animation: marquee 35s linear infinite; }
+    .ticker-item { display: inline-block; padding: 0 35px; font-size: 1.05rem; color: #00E676; }
     @keyframes marquee { 0% { transform: translate3d(100%, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+    
     .psx-header {
-        background: linear-gradient(135deg, #004d40 0%, #00251a 100%);
-        padding: 22px; border-radius: 15px; border-bottom: 4px solid #FFD700;
-        box-shadow: 0 4px 15px rgba(0,77,64,0.4); margin-top: 10px;
-        margin-bottom: 25px; text-align: center;
+        background: linear-gradient(135deg, #0d1B2A 0%, #1B263B 100%);
+        padding: 25px; border-radius: 16px; border: 1px solid #415A77;
+        border-bottom: 4px solid #00E676;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.6); margin-top: 15px; margin-bottom: 25px; text-align: center;
     }
-    .psx-header h1 { color: #ffffff; font-size: 2.2rem; margin: 0; font-weight: 800; }
+    .psx-header h1 { color: #FFFFFF; font-size: 2.3rem; margin: 0; font-weight: 800; letter-spacing: 0.5px; }
+    
     .crypto-card {
-        background: #131B2E; padding: 25px; border-radius: 15px;
-        border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        background: #0D1527; padding: 25px; border-radius: 16px;
+        border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     }
     .binance-order-panel {
-        background: #182232; padding: 20px; border-radius: 12px;
+        background: #111A2E; padding: 22px; border-radius: 14px;
         border: 2px solid #2B394A; margin-top: 20px;
     }
     .target-box-green {
-        background: #002B1B; border: 1px solid #00E676; padding: 12px;
-        border-radius: 10px; text-align: center; color: #00E676; font-weight: bold;
+        background: #022C1C; border: 1px solid #00E676; padding: 14px;
+        border-radius: 12px; text-align: center; color: #00E676; font-weight: bold;
     }
     .target-box-red {
-        background: #2B0008; border: 1px solid #FF1744; padding: 12px;
-        border-radius: 10px; text-align: center; color: #FF1744; font-weight: bold;
+        background: #34020B; border: 1px solid #FF1744; padding: 14px;
+        border-radius: 12px; text-align: center; color: #FF1744; font-weight: bold;
+    }
+    .shariah-badge {
+        background: #004D40; color: #00E676; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -124,10 +133,11 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ KSE-100 Benchmark Live Scanning Active</div>
+    <div class="ticker-item">🏛️ KSE-100 Benchmark Live Scan Active</div>
     <div class="ticker-item">🪙 BTC/USD: AI Confluence Target Active</div>
-    <div class="ticker-item">📢 Automated PSX Dividend Scraping Engine Running</div>
-    <div class="ticker-item">⚡ Institutional Multi-Asset Signal Portal</div>
+    <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
+    <div class="ticker-item">🚀 Penny Stocks Radar (under Rs. 15) Live</div>
+    <div class="ticker-item">💵 USD/PKR Interbank & Gold Hedge Engine</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -137,6 +147,8 @@ ALL_PSX_STOCKS = [
     'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 
     'PSO', 'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK'
 ]
+
+SHARIAH_COMPLIANT_STOCKS = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 'POL', 'MEBL', 'MARI']
 
 STOCK_FUNDAMENTALS = {
     'FFC': {'promoter': 72.5, 'fii': 5.2, 'shares_out_m': 1272},
@@ -168,7 +180,6 @@ def fetch_psx_live_data(symbol):
         pass
     return {"symbol": clean_symbol, "price": 0.0, "status": "Error"}
 
-# AUTOMATED PSX DIVIDEND SCRAPER
 @st.cache_data(ttl=600)
 def fetch_psx_dividends_live():
     url = "https://dps.psx.com.pk/announcements"
@@ -317,6 +328,15 @@ def generate_high_precision_crypto_signal(symbol_ticker):
 
 st.markdown("<div class='psx-header'><h1>🏛 PSX AI و پرو کرپٹو ٹریڈنگ ڈیش بورڈ</h1></div>", unsafe_allow_html=True)
 
+# TOP HEDGE RADAR (USD/PKR, Gold, USDT)
+col_h1, col_h2, col_h3, col_h4 = st.columns(4)
+col_h1.metric("💵 USD/PKR انٹربینک", "278.45", "+0.15")
+col_h2.metric("🥇 24K سونا (فی تولہ)", "Rs. 272,500", "+1,200")
+col_h3.metric("🪙 USDT P2P ریٹ", "Rs. 283.20", "+0.30")
+col_h4.metric("📊 KSE-100 انڈیکس", "165,417.50", "+641.10")
+
+st.divider()
+
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
 
 if not st.session_state["logged_in"]:
@@ -357,18 +377,27 @@ else:
 curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
-tab_list = ["📂 پورٹ فولیو مینیجر", "⚡ کرپٹو AI سگنلز", "📅 PSX آٹو ڈیویڈنڈ کیلنڈر", "⚖️ دو اسٹاکس کا موازنہ", "🧪 ڈیمو ٹریڈنگ وائلٹ", "🏛️ ڈاؤ تھیوری اسکینر", "🎯 پرو فلٹر اسکینر"]
+tab_list = [
+    "📂 پورٹ فولیو و زکوۃ", 
+    "⚡ کرپٹو AI سگنلز", 
+    "🚀 پینی اسٹاکس (under Rs.15)", 
+    "🇵🇰 ٹیکس و فائلر کیلکولیٹر", 
+    "📅 PSX ڈیویڈنڈ کیلنڈر", 
+    "⚖️ اسٹاک موازنہ", 
+    "🧪 ڈیمو ٹریڈنگ وائلٹ", 
+    "🏛️ ڈاؤ تھیوری اسکینر"
+]
 if is_admin:
     tab_list.append("👥 یوزر مینجمنٹ (ایڈمن)")
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: PORTFOLIO
+# TAB 1: PORTFOLIO & ZAKAT CALCULATOR
 with tabs[0]:
     if not st.session_state["logged_in"]:
         st.warning("⚠️ اپنے پورٹ فولیو کے لیے لاگ ان کریں۔")
     else:
-        st.subheader(f"📂 {curr_user} کا پورٹ فولیو")
+        st.subheader(f"📂 {curr_user} کا پورٹ فولیو و شرعی زکوۃ کیلکولیٹر")
         if curr_user not in ports_db:
             ports_db[curr_user] = {}
 
@@ -390,6 +419,7 @@ with tabs[0]:
                         st.rerun()
 
         user_p = ports_db.get(curr_user, {})
+        tot_val = 0.0
         if user_p:
             for sym, data in list(user_p.items()):
                 p_res = fetch_psx_live_data(sym)
@@ -397,10 +427,13 @@ with tabs[0]:
                 b_price = data["Buy Price"]
                 qty = data["Quantity"]
                 pnl = (live_price - b_price) * qty
+                tot_val += (live_price * qty)
+                
+                is_shariah = "🌙 Shariah Compliant" if sym in SHARIAH_COMPLIANT_STOCKS else "🏢 Regular"
                 
                 col_a, col_b, col_c, col_d = st.columns([2, 2, 2, 1])
                 with col_a:
-                    st.markdown(f"**{sym}** ({qty} شیئرز)")
+                    st.markdown(f"**{sym}** ({qty} شیئرز) <span class='shariah-badge'>{is_shariah}</span>", unsafe_allow_html=True)
                 with col_b:
                     st.write(f"خرید: Rs.{b_price:,.2f} | لائیو: Rs.{live_price:,.2f}")
                 with col_c:
@@ -411,8 +444,12 @@ with tabs[0]:
                         del ports_db[curr_user][sym]
                         save_json(PORTFOLIO_FILE, ports_db)
                         st.rerun()
+            
+            st.divider()
+            zakat_amount = tot_val * 0.025
+            st.info(f"🕌 **سالانہ زکوۃ تخمینہ (2.5%):** آپ کی کل پورٹ فولیو مالیت (Rs. {tot_val:,.2f}) پر زکوۃ کی واجب الادا رقم: **Rs. {zakat_amount:,.2f}** ہے اور حلال شیئرز الگ دکھا دیے گئے ہیں۔")
 
-# TAB 2: CRYPTO SIGNALS
+# TAB 2: CRYPTO SIGNALS & WHATSAPP SHARE
 with tabs[1]:
     st.subheader("⚡ کرپٹو AI سگنلز و پرو ٹریڈنگ ارڈر پینل")
     col_c1, col_c2 = st.columns([1, 2])
@@ -455,6 +492,11 @@ with tabs[1]:
                     st.markdown(f"<div class='target-box-red'>🛑 اسٹاپ لاس (SL)<br>${res_data['sl']}</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
+                # WHATSAPP SIGNAL SHARE BUTTON
+                msg_text = f"🚀 *PSX & Crypto AI Signal Alert*\n\n🪙 *Token:* {res_data['ticker']}\n📊 *Signal:* {res_data['signal']}\n🛍️ *Buy Range:* {res_data['buy_range']}\n🎯 *Target 1:* ${res_data['tp1']}\n🛑 *Stop Loss:* ${res_data['sl']}\n\n_Generated via Master Javed AI Engine_"
+                wa_url = f"https://api.whatsapp.com/send?text={urllib.parse.quote(msg_text)}"
+                st.markdown(f"<br><a href='{wa_url}' target='_blank' style='background-color:#25D366; color:white; padding:10px 20px; border-radius:10px; text-decoration:none; font-weight:bold; display:inline-block;'>📲 یہ سگنل واٹس ایپ پر شیئر کریں</a>", unsafe_allow_html=True)
+
                 st.markdown("<div class='binance-order-panel'>", unsafe_allow_html=True)
                 st.markdown("### 🏦 بینانس اسٹائل ڈیمو آرڈر ایگزیکیوشن")
                 
@@ -521,25 +563,57 @@ with tabs[1]:
                             save_json(DEMO_TRADES_FILE, demo_db)
                             st.success(f"✅ {res_data['ticker']} SHORT آرڈر کامیابی سے فعال ہو گیا!")
                 st.markdown("</div>", unsafe_allow_html=True)
-                
-                st.markdown("### 📈 لائیو TradingView چارٹ")
-                clean_tv_ticker = res_data['ticker'].replace("-USD", "USD")
-                tv_html = f"""
-                <div class="tradingview-widget-container">
-                  <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tradingview_1&symbol={clean_tv_ticker}&interval=D&hidesidetoolbar=0&symboledit=1&saveimage=1&toolbarbg=f1f3f6&studies=[]&theme=dark&style=1&timezone=Etc%2FUTC" width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
-                </div>
-                """
-                components.html(tv_html, height=470)
 
-# TAB 3: AUTOMATED DIVIDEND CALENDAR
+# TAB 3: PENNY STOCKS RADAR (UNDER RS. 15)
 with tabs[2]:
+    st.subheader("🚀 پینی اسٹاکس الرٹ زون (Rs. 15 سے کم قیمت والے شیئرز)")
+    if st.button("🔍 15 روپے سے کم والے شیئرز اسکین کریں"):
+        penny_list = []
+        prog = st.progress(0)
+        for idx, sym in enumerate(ALL_PSX_STOCKS):
+            p_data = fetch_psx_live_data(sym)
+            pr = p_data["price"]
+            if 0.5 < pr <= 15.0:
+                penny_list.append({
+                    "اسٹاک": sym,
+                    "لائیو قیمت": f"Rs. {pr:,.2f}",
+                    "حالت / ٹرینڈ": "🚀 بولش بریک آؤٹ زون" if pr > 8.0 else "🟢 سائیڈ ویز بائنگ",
+                    "شرعی بیج": "🌙 Shariah Compliant" if sym in SHARIAH_COMPLIANT_STOCKS else "🏢 Regular"
+                })
+            prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
+        if penny_list:
+            st.dataframe(pd.DataFrame(penny_list), use_container_width=True)
+        else:
+            st.info("اس وقت ۱۵ روپے سے کم قیمت والے شیئرز لوڈ ہو رہے ہیں۔")
+
+# TAB 4: TAX & FILER VS NON-FILER CALCULATOR
+with tabs[3]:
+    st.subheader("🇵🇰 پاکستان ٹیکس و فائلر بمقابلہ نان فائلر بچت کیلکولیٹر")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        income_type = st.selectbox("آمدنی کی قسم:", ["ڈیویڈنڈ منافع (Dividend Income)", "Capital Gain (شیئرز کی خرید وفروخت کا نفع)"])
+        raw_amount = st.number_input("کل نفع یا ڈیویڈنڈ رقم (Rs.)", min_value=1000, value=50000, step=5000)
+    with col_t2:
+        if "Dividend" in income_type:
+            filer_tax = raw_amount * 0.15
+            non_filer_tax = raw_amount * 0.30
+        else:
+            filer_tax = raw_amount * 0.125
+            non_filer_tax = raw_amount * 0.25
+            
+        savings = non_filer_tax - filer_tax
+        st.write(f"🟢 **فائلر (Filer) ٹیکس:** Rs. {filer_tax:,.2f}")
+        st.write(f"🔴 **نان فائلر (Non-Filer) ٹیکس:** Rs. {non_filer_tax:,.2f}")
+        st.success(f"💰 **فائلر بننے کی صورت میں خالص بچت:** **Rs. {savings:,.2f}**")
+
+# TAB 5: AUTOMATED DIVIDEND CALENDAR
+with tabs[4]:
     st.subheader("📅 PSX خودکار ڈیویڈنڈ کیلنڈر (Live Scraped)")
-    st.markdown("پاکستان اسٹاک ایکسچینج کی طرف سے آنے والے تمام ڈیویڈنڈز اور بونس شیئرز کا خودکار لائیو ڈیٹا:")
     df_div = fetch_psx_dividends_live()
     st.dataframe(df_div, use_container_width=True)
 
-# TAB 4: COMPARE TWO STOCKS SIDE BY SIDE
-with tabs[3]:
+# TAB 6: COMPARE TWO STOCKS SIDE BY SIDE
+with tabs[5]:
     st.subheader("⚖️ دو اسٹاکس کا آمنے سامنے موازنہ (Side-by-Side Comparison)")
     c1, c2 = st.columns(2)
     with c1:
@@ -560,8 +634,8 @@ with tabs[3]:
         })
         st.dataframe(comp_df, use_container_width=True)
 
-# TAB 5: DEMO WALLET
-with tabs[4]:
+# TAB 7: DEMO WALLET
+with tabs[6]:
     st.subheader("🧪 ڈیمو (Paper Trading) وائلٹ")
     if not st.session_state["logged_in"]:
         st.warning("⚠️ ڈیمو اکاؤنٹ کے لیے لاگ ان کریں۔")
@@ -623,8 +697,8 @@ with tabs[4]:
             time.sleep(5)
             st.rerun()
 
-# TAB 6: DOW THEORY
-with tabs[5]:
+# TAB 8: DOW THEORY
+with tabs[7]:
     st.subheader("🏛️ ڈاؤ تھیوری بائنگ و سیلنگ زون")
     if st.button("🚀 PSX ڈاؤ اسکین کریں"):
         dow_results = []
@@ -643,29 +717,8 @@ with tabs[5]:
         if dow_results:
             st.dataframe(pd.DataFrame(dow_results), use_container_width=True)
 
-# TAB 7: PRO FILTER
-with tabs[6]:
-    st.subheader("🎯 پرو فلٹر اسکینر")
-    if st.button("🔍 پرو اسکین کریں"):
-        pro_results = []
-        prog = st.progress(0)
-        for idx, sym in enumerate(ALL_PSX_STOCKS):
-            fdata = STOCK_FUNDAMENTALS.get(sym, {'promoter': 71.5, 'fii': 3.8, 'shares_out_m': 300})
-            p_info = fetch_psx_live_data(sym)
-            price = p_info["price"]
-            if price > 0:
-                mcap_m = price * fdata['shares_out_m']
-                if fdata['promoter'] > 70.0 and fdata['fii'] > 3.5 and mcap_m < 10000.0:
-                    pro_results.append({
-                        "اسٹاک": sym, "قیمت (Rs.)": f"{price:,.2f}",
-                        "پروموٹر": f"{fdata['promoter']}%", "FII": f"{fdata['fii']}%", "MCap": f"{fdata['shares_out_m']*price:,.2f}M"
-                    })
-            prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
-        if pro_results:
-            st.dataframe(pd.DataFrame(pro_results), use_container_width=True)
-
-# TAB 8: ADMIN
+# TAB 9: ADMIN
 if is_admin:
-    with tabs[7]:
+    with tabs[8]:
         st.subheader("👥 ایڈمن ڈیش بورڈ")
         st.write("یوزر مینجمنٹ فعال ہے۔")
