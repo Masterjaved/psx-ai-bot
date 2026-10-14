@@ -87,7 +87,7 @@ if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
     st.session_state["logged_in"] = True
     st.session_state["user_id"] = saved_user
 
-# Premium Binance Dark Styling
+# Premium Styling
 st.markdown("""
     <style>
     html, body, [class*="css"] { font-size: 18px !important; }
@@ -182,6 +182,7 @@ def evaluate_dow_theory(df):
     else:
         return "🟡 انتظار کریں (Hold / Neutral)", "قیمت نارمل رینج میں ہے۔ بریک آؤٹ کا انتظار کریں۔"
 
+# High-Precision Signal Engine with Buy-Range and Target Levels
 def generate_high_precision_crypto_signal(symbol_ticker):
     try:
         clean_ticker = symbol_ticker.upper().strip()
@@ -199,8 +200,6 @@ def generate_high_precision_crypto_signal(symbol_ticker):
             rsi_val = float(calculate_rsi(c_close).iloc[-1])
             
             ema20 = float(c_close.ewm(span=20).mean().iloc[-1])
-            ema50 = float(c_close.ewm(span=50).mean().iloc[-1])
-            
             recent_vol = float(c_vol.iloc[-1])
             avg_vol = float(c_vol.iloc[-15:-1].mean())
             
@@ -216,35 +215,37 @@ def generate_high_precision_crypto_signal(symbol_ticker):
             rec_dir = "LONG"
             
             if rsi_val < 42 and curr_p > ema20 and recent_vol > avg_vol * 1.2:
-                sig_type = "🟢 STRONG BUY / LONG (زبردست خریداری)"
+                sig_type = "🟢 STRONG BUY / خریدیں"
                 sig_color = "#00E676"
                 confidence = 94
                 rec_dir = "LONG"
             elif rsi_val < 45 and curr_p > lower_bb:
-                sig_type = "🟢 BUY / LONG (خریداری زون)"
+                sig_type = "🟢 BUY / خریدی کا زون"
                 sig_color = "#00E676"
                 confidence = 86
                 rec_dir = "LONG"
             elif rsi_val > 68 and curr_p < ema20:
-                sig_type = "🔴 STRONG SHORT / SELL (سٹرونگ فروخت)"
+                sig_type = "🔴 STRONG SHORT / بیچیں"
                 sig_color = "#FF1744"
                 confidence = 93
                 rec_dir = "SHORT"
             elif rsi_val > 65 or curr_p > upper_bb:
-                sig_type = "🔴 SHORT / SELL (پرافٹ ٹیکنگ)"
+                sig_type = "🔴 SHORT / منافع بک کریں"
                 sig_color = "#FF1744"
                 confidence = 84
                 rec_dir = "SHORT"
                 
             if rec_dir == "LONG":
-                tp1 = round(curr_p + (atr * 1.2), 4 if curr_p < 1 else 2)
-                tp2 = round(curr_p + (atr * 2.5), 4 if curr_p < 1 else 2)
-                tp3 = round(curr_p + (atr * 4.0), 4 if curr_p < 1 else 2)
+                buy_low = round(curr_p * 0.995, 4 if curr_p < 1 else 2)
+                buy_high = round(curr_p * 1.008, 4 if curr_p < 1 else 2)
+                tp1 = round(curr_p + (atr * 1.5), 4 if curr_p < 1 else 2)
+                tp2 = round(curr_p + (atr * 3.0), 4 if curr_p < 1 else 2)
                 sl = round(curr_p - (atr * 1.5), 4 if curr_p < 1 else 2)
             else:
-                tp1 = round(curr_p - (atr * 1.2), 4 if curr_p < 1 else 2)
-                tp2 = round(curr_p - (atr * 2.5), 4 if curr_p < 1 else 2)
-                tp3 = round(curr_p - (atr * 4.0), 4 if curr_p < 1 else 2)
+                buy_low = round(curr_p * 0.992, 4 if curr_p < 1 else 2)
+                buy_high = round(curr_p * 1.005, 4 if curr_p < 1 else 2)
+                tp1 = round(curr_p - (atr * 1.5), 4 if curr_p < 1 else 2)
+                tp2 = round(curr_p - (atr * 3.0), 4 if curr_p < 1 else 2)
                 sl = round(curr_p + (atr * 1.5), 4 if curr_p < 1 else 2)
             
             return {
@@ -256,7 +257,8 @@ def generate_high_precision_crypto_signal(symbol_ticker):
                 "signal": sig_type,
                 "color": sig_color,
                 "direction": rec_dir,
-                "tp1": tp1, "tp2": tp2, "tp3": tp3, "sl": sl
+                "buy_range": f"${buy_low} -${buy_high}",
+                "tp1": tp1, "tp2": tp2, "sl": sl
             }
     except Exception:
         pass
@@ -393,13 +395,13 @@ with tabs[1]:
                 
                 t1, t2, t3, t4 = st.columns(4)
                 with t1:
-                    st.markdown(f"<div class='target-box-green'>🎯 Target 1<br>${res_data['tp1']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='target-box-green'>🛍️ اینٹری کی حد (Buying Range)<br>{res_data['buy_range']}</div>", unsafe_allow_html=True)
                 with t2:
-                    st.markdown(f"<div class='target-box-green'>🎯 Target 2<br>${res_data['tp2']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='target-box-green'>🎯 پہلا ٹارگٹ (TP1)<br>${res_data['tp1']}</div>", unsafe_allow_html=True)
                 with t3:
-                    st.markdown(f"<div class='target-box-green'>🎯 Target 3<br>${res_data['tp3']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='target-box-green'>🎯 دوسرا ٹارگٹ (TP2)<br>${res_data['tp2']}</div>", unsafe_allow_html=True)
                 with t4:
-                    st.markdown(f"<div class='target-box-red'>🛑 Stop Loss<br>${res_data['sl']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='target-box-red'>🛑 اسٹاپ لاس (SL)<br>${res_data['sl']}</div>", unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 # Full Binance Order Execution Box
@@ -470,7 +472,7 @@ with tabs[1]:
                             st.success(f"✅ {res_data['ticker']} SHORT آرڈر کامیابی سے فعال ہو گیا!")
                 st.markdown("</div>", unsafe_allow_html=True)
                 
-                st.markdown("### 📈 لائیو TradingView چارٹ")
+                st.markdown("### 📈 لائیو TradingView چارٹ (اردو / انگلش سگنل لیبلز)")
                 clean_tv_ticker = res_data['ticker'].replace("-USD", "USD")
                 tv_html = f"""
                 <div class="tradingview-widget-container">
@@ -501,7 +503,6 @@ with tabs[2]:
         st.divider()
         auto_ref = st.checkbox("🔄 لائیو پوزیشنز آٹو ریفریش (Auto Refresh 5s)", value=False)
         
-        # OPEN TRADES WITH CLOSE BUTTONS
         st.markdown("### ⚡ جاری (OPEN) پوزیشنز")
         open_trades = [t for t in all_trades if t.get("status") == "OPEN"]
         
@@ -578,7 +579,7 @@ with tabs[4]:
                 if fdata['promoter'] > 70.0 and fdata['fii'] > 3.5 and mcap_m < 10000.0:
                     pro_results.append({
                         "اسٹاک": sym, "قیمت (Rs.)": f"{price:,.2f}",
-                        "پروموٹر": f"{fdata['promoter']}%", "FII": f"{fdata['fii']}%", "MCap": f"{mcap_m:,.2f}M"
+                        "پروموٹر": f"{fdata['promoter']}%", "FII": f"{fdata['fii']}%", "MCap": f"{fdata['shares_out_m']*price:,.2f}M"
                     })
             prog.progress((idx + 1) / len(ALL_PSX_STOCKS))
         if pro_results:
