@@ -39,6 +39,10 @@
         "FPJM": {
             "Buy Price": 21.1,
             "Quantity": 75
+        },
+        "OGDC": {
+            "Buy Price": 313.75,
+            "Quantity": 33
         }
     }
 }
