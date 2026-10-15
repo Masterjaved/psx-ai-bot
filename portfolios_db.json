@@ -47,6 +47,10 @@
         "SAZEW": {
             "Buy Price": 1544.66,
             "Quantity": 7
+        },
+        "SGPL": {
+            "Buy Price": 23.72,
+            "Quantity": 149
         }
     }
 }
