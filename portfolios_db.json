@@ -43,6 +43,10 @@
         "OGDC": {
             "Buy Price": 313.75,
             "Quantity": 33
+        },
+        "SAZEW": {
+            "Buy Price": 1544.66,
+            "Quantity": 7
         }
     }
 }
