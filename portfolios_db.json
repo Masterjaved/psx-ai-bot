@@ -35,6 +35,10 @@
             "Quantity": 45,
             "Target Sell": 233.27,
             "Stop Loss": 182.56
+        },
+        "FPJM": {
+            "Buy Price": 21.1,
+            "Quantity": 75
         }
     }
 }
