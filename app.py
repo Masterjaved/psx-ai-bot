@@ -7,7 +7,7 @@ import base64
 from bs4 import BeautifulSoup
 import time
 
-# Try importing pypsx-toolkit for professional PSX data fetching
+# Try importing pypsx-toolkit
 try:
     from pypsx.psx import PSX
     psx_toolkit_available = True
@@ -134,13 +134,11 @@ SHARIAH_COMPLIANT_STOCKS = ['FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFER
 def fetch_psx_live_data(symbol):
     clean_symbol = symbol.upper().replace(".KA", "").strip()
     
-    # Try using pypsx-toolkit if available
     if psx_toolkit_available:
         try:
             p = PSX()
             df = p.get_quote(clean_symbol)
             if not df.empty:
-                # Extract closing/current price column safely
                 price_col = [c for c in df.columns if 'close' in c.lower() or 'price' in c.lower() or 'current' in c.lower()]
                 if price_col:
                     val = float(df[price_col[0]].iloc[0])
@@ -148,7 +146,6 @@ def fetch_psx_live_data(symbol):
         except Exception:
             pass
 
-    # Fallback to official PSX web scraping
     url = f"https://dps.psx.com.pk/company/{clean_symbol}"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
@@ -358,76 +355,133 @@ with tabs[1]:
 
 # TAB 3: CRYPTO SIGNALS
 with tabs[2]:
-    st.subheader("⚡ عالمی کرپٹو AI سگنلز")
+    st.subheader("⚡ عالمی کرپٹو AI سگنلز و انڈیکیٹرز")
     st.markdown("""
     <div class='admin-card'>
-    <h3>🪙 سرفہرست کرپٹو کرنسیز کے لائیو رجحانات</h3>
-    <p>عالمی منڈی میں بٹ کوائن (BTC)، ایتھریم (ETH) اور دیگر ڈیجیٹل کرنسیز کے لیے AI سگنل زون۔</p>
+    <h3>🪙 سرفہرست کرپٹو کرنسیز کے لائیو AI سگنلز</h3>
+    <p>عالمی مارکیٹ میں ڈیجیٹل اثاثہ جات کی خرید و فروخت کے لیے سمارٹ سگنل زون:</p>
     <ul>
-        <li><b>Bitcoin (BTC):</b> Bullish Trend - اسپورٹ زون برقرار ہے۔</li>
-        <li><b>Ethereum (ETH):</b> Accumulation Phase - خریداری کا بہترین موقع۔</li>
+        <li><b>Bitcoin (BTC):</b> 🟢 <b>Strong Buy Zone</b> - لانگ ٹرم سپورٹ برقرار، ہدف اگلی مزاحمتی حد۔</li>
+        <li><b>Ethereum (ETH):</b> 🟢 <b>Accumulation Phase</b> - گراوٹ پر خریداری کا بہترین موقع۔</li>
+        <li><b>Binance Coin (BNB):</b> 🔵 <b>Stable Trend</b> - مستحکم رفتار اور ہولڈنگ زون۔</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
+    
+    col_cs1, col_cs2 = st.columns(2)
+    with col_cs1:
+        st.markdown("""
+        <div class='pros-card'>
+        <h4>🟢 بائنگ (Long Signal) کے اصول</h4>
+        <ul>
+            <li>جب آر ایس آئی (RSI) 40 سے نیچے ہو کر اوپر کی طرف موڑ لے۔</li>
+            <li>موون ایوریج کراس اوور پجیٹیو زون میں ہو۔</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_cs2:
+        st.markdown("""
+        <div class='cons-card'>
+        <h4>🔴 سیلنگ (Exit / Short) کے اصول</h4>
+        <ul>
+            <li>جب مارکیٹ اوور باٹ (Overbought) زون میں چلی جائے۔</li>
+            <li>اہم سپورٹ لیول ٹوٹنے پر منافع بک کریں۔</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
 
-# TAB 4: PENNY STOCKS
+# TAB 4: PENNY STOCKS SCANNER
 with tabs[3]:
-    st.subheader("🚀 پینی اسٹاکس الرٹ زون (Rs. 15 سے کم)")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>💼 کم قیمت والے فعال شیئرز (Low-Priced High Volume Stocks)</h3>
-    <p>پاکستان اسٹاک ایکسچینج کے وہ سستے شیئرز جن میں روزانہ کی بنیاد پر سب سے زیادہ والیوم اور ٹریڈنگ ہوتی ہے:</p>
-    <ul>
-        <li><b>WTL (Worldcall Telecom):</b> ٹیلی کام سیکٹر کا سب سے زیادہ ٹریڈ ہونے والا شیئر۔</li>
-        <li><b>CNERGY (Cnergyico PK):</b> انرجی سیکٹر میں کم قیمت اور فعال سکرپٹ۔</li>
-        <li><b>TELE (Telecard Limited):</b> ٹیکنالوجی سیکٹر کا پینی اسٹاک۔</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🚀 پینی اسٹاکس اسکینر الرٹ (Under Rs. 15)")
+    st.markdown("15 روپے سے کم قیمت والے سب سے زیادہ والیوم والے شیئرز کا لائیو اسکینر:")
+    penny_list = ['CNERGY', 'WTL', 'TELE', 'KEL', 'HUMNL', 'BYCO', 'PACE', 'SILK']
+    p_data = []
+    for p_sym in penny_list:
+        p_res = fetch_psx_live_data(p_sym)
+        p_price = p_res['price'] if p_res['status'] == 'Success' else 0.0
+        p_data.append({
+            "اسٹاک سمبل": p_sym,
+            "لائیو قیمت (PKR)": f"Rs. {p_price:.2f}" if p_price > 0 else "N/A",
+            "سیکٹر": "پینی اسٹاک / ہائی والیوم",
+            "حالت": "🟢 فعال (Active Trading)" if p_price > 0 else "⚠️ وریفکیشن جاری"
+        })
+    st.dataframe(pd.DataFrame(p_data), use_container_width=True)
 
-# TAB 5: TAX CALCULATOR
+# TAB 5: TAX & FILER CALCULATOR
 with tabs[4]:
-    st.subheader("🇵🇰 پاکستان ٹیکس و فائلر بچت کیلکولیٹر")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>📊 فائلر بمقابلہ نان فائلر ٹیکس بچت گائیڈ</h3>
-    <p>پاکستان کے موجودہ انکم ٹیکس آرڈیننس کے مطابق:</p>
-    <ul>
-        <li><b>ڈیویڈنڈ ٹیکس (Dividend Tax):</b> فائلر کے لیے 15% جبکہ نان فائلر کے لیے 30% ہے۔</li>
-        <li><b>کیپٹل گین ٹیکس (CGT):</b> فائلر کے لیے شیئر ہولڈنگ کی مدت کے لحاظ سے 0% سے 15% تک جبکہ نان فائلر کے لیے دوگنا ہے۔</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🇵🇰 پاکستان انکم ٹیکس و فائلر بچت کیلکولیٹر")
+    st.write("فائلر اور نان فائلر ٹیکس کٹوتی کا لائیو حساب:")
+    
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        inv_amt = st.number_input("کل منافع / ڈیویڈنڈ کی رقم (Rs.):", min_value=1000, value=50000, step=5000)
+    with col_t2:
+        status_choice = st.selectbox("اپنا ایف بی آر سٹیٹس منتخب کریں:", ["فائلر (Active Filer)", "نان فائلر (Non-Filer)"])
+    
+    div_tax_rate = 0.15 if "فائلر" in status_choice and "نان" not in status_choice else 0.30
+    tax_deducted = inv_amt * div_tax_rate
+    net_received = inv_amt - tax_deducted
+    saving = (inv_amt * 0.30) - (inv_amt * 0.15) if "فائلر" in status_choice and "نان" not in status_choice else 0
+    
+    st.divider()
+    tc1, tc2, tc3 = st.columns(3)
+    tc1.metric("ٹیکس کٹوتی (Tax Rate)", f"{int(div_tax_rate*100)}%")
+    tc2.metric("کٹوتی رقم (Tax Amount)", f"Rs. {tax_deducted:,.2f}")
+    tc3.metric("خالص وصول شدہ رقم", f"Rs. {net_received:,.2f}")
+    if saving > 0:
+        st.success(f"🎉 مبارک ہو! فائلر ہونے کی وجہ سے آپ نے **Rs. {saving:,.2f}** کی بچت کی ہے۔")
 
 # TAB 6: DIVIDEND CALENDAR
 with tabs[5]:
     st.subheader("📅 PSX خودکار ڈیویڈنڈ و بک کلوزر کیلنڈر")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>📋 آنے والے کارپوریٹ اعلانات اور بک کلوزر</h3>
-    <p>کمپنیوں کی جانب سے منافع (Payout) اور ڈیویڈنڈ کے اعلان کی تازہ ترین شیڈول رپورٹ۔ اپنے پورٹ فولیو کے شیئرز کے ڈیویڈنڈ ٹریک کریں۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.write("اہم کمپنیوں کے حالیہ پی آؤٹ اور ڈیویڈنڈز تفاصیل:")
+    div_stocks = ['FFC', 'EFERT', 'ENGRO', 'HUBC', 'MEBL', 'MARI', 'POL']
+    div_list_data = []
+    for d_sym in div_stocks:
+        d_info = fetch_psx_single_dividend(d_sym)
+        div_list_data.append({
+            "کمپنی سمبل": d_sym,
+            "ڈیویڈنڈ / کارپوریٹ خبر": d_info
+        })
+    st.dataframe(pd.DataFrame(div_list_data), use_container_width=True)
 
-# TAB 7: COMPARE
+# TAB 7: STOCK COMPARISON
 with tabs[6]:
-    st.subheader("⚖️ دو اسٹاکس کا تقابلی موازنہ")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>🔍 کمپنیوں کی کارکردگی کا تقابل</h3>
-    <p>دو مختلف کمپنیوں (مثلاً FFC اور OGDC) کی قیمت، پرافٹ مارجن اور ڈیویڈنڈ ییلڈ کا موازنہ کرنے کا زون۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("⚖️ دو اسٹاکس کا لائیو تقابلی موازنہ")
+    col_cmp1, col_cmp2 = st.columns(2)
+    with col_cmp1:
+        sym1 = st.selectbox("پہلی کمپنی منتخب کریں:", ALL_PSX_STOCKS, index=0)
+    with col_cmp2:
+        sym2 = st.selectbox("دوسری کمپنی منتخب کریں:", ALL_PSX_STOCKS, index=1)
+        
+    if sym1 and sym2:
+        res1 = fetch_psx_live_data(sym1)
+        res2 = fetch_psx_live_data(sym2)
+        sh1 = "🌙 حلال (KMI-30)" if sym1 in SHARIAH_COMPLIANT_STOCKS else "🏢 Regular"
+        sh2 = "🌙 حلال (KMI-30)" if sym2 in SHARIAH_COMPLIANT_STOCKS else "🏢 Regular"
+        
+        cmp_df = pd.DataFrame({
+            "معیار (Metric)": ["کمپنی نام", "لائیو قیمت", "شرعی سٹیٹس"],
+            f"{sym1}": [res1['name'], f"Rs. {res1['price']:,.2f}", sh1],
+            f"{sym2}": [res2['name'], f"Rs. {res2['price']:,.2f}", sh2]
+        })
+        st.dataframe(cmp_df, use_container_width=True)
 
 # TAB 8: DEMO WALLET
 with tabs[7]:
-    st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ (ورچوئل ٹریڈنگ)")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>💼 فرضی سرمایہ کاری اور پریکٹس پورٹل</h3>
-    <p>1,00,000 روپے کے ورچوئل بیلنس کے ساتھ لائیو مارکیٹ میں شیئر خریدنے اور بیچنے کی پریکٹس کریں۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ (ورچوئل پورٹ فولیو)")
+    st.info("💡 ورچوئل بیلنس: **Rs. 100,000** (بغیر کسی مالی خطرے کے پریکٹس پورٹل)")
+    
+    col_d1, col_d2, col_d3 = st.columns(3)
+    with col_d1:
+        d_sym = st.text_input("خریدنے کے لیے سمبل درج کریں:", value="SYS").upper().strip()
+    with col_d2:
+        d_price = st.number_input("قیمت (Rs.):", min_value=1.0, value=100.0)
+    with col_d3:
+        d_qty = st.number_input("تعداد:", min_value=1, value=50)
+        
+    if st.button("🛒 ورچوئل شیئرز خریدیں"):
+        st.success(f"✅ مبارک ہو! {d_qty} شیئرز {d_sym} ورچوئل وائلٹ میں شامل ہو گئے ہیں۔")
 
 # TAB 9: ADMIN USER MANAGEMENT
 if is_admin:
