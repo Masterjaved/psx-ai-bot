@@ -215,7 +215,7 @@ tab_list = [
     "🧪 ڈیمو ٹریڈنگ وائلٹ"
 ]
 if is_admin:
-    tab_list.append("👥 یوزر مینجমেন্ট (ایڈمن)")
+    tab_list.append("👥 یوزر مینجمنٹ (ایڈمن)")
 
 tabs = st.tabs(tab_list)
 
@@ -336,32 +336,75 @@ with tabs[1]:
 # TAB 3: CRYPTO SIGNALS
 with tabs[2]:
     st.subheader("⚡ عالمی کرپٹو AI سگنلز")
-    st.write("بٹ کوائن (BTC)، ایتھریم (ETH) اور دیگر ڈیجیٹل کرنسیز کے لیے ریئل ٹائم AI سگنلز زون۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>🪙 سرفہرست کرپٹو کرنسیز کے لائیو رجحانات</h3>
+    <p>عالمی منڈی میں بٹ کوائن (BTC)، ایتھریم (ETH) اور دیگر ڈیجیٹل کرنسیز کے لیے AI سگنل زون۔</p>
+    <ul>
+        <li><b>Bitcoin (BTC):</b> Bullish Trend - اسپورٹ زون برقرار ہے۔</li>
+        <li><b>Ethereum (ETH):</b> Accumulation Phase - خریداری کا بہترین موقع۔</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 4: PENNY STOCKS
 with tabs[3]:
     st.subheader("🚀 پینی اسٹاکس الرٹ زون (Rs. 15 سے کم)")
-    st.write("کم قیمت والے فعال شیئرز کی فہرست جو شارٹ ٹرم اور لانگ ٹرم سرمایہ کاری کے لیے بہترین ہیں۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>💼 کم قیمت والے فعال شیئرز (Low-Priced High Volume Stocks)</h3>
+    <p>پاکستان اسٹاک ایکسچینج کے وہ سستے شیئرز جن میں روزانہ کی بنیاد پر سب سے زیادہ والیوم اور ٹریڈنگ ہوتی ہے:</p>
+    <ul>
+        <li><b>WTL (Worldcall Telecom):</b> ٹیلی کام سیکٹر کا سب سے زیادہ ٹریڈ ہونے والا شیئر۔</li>
+        <li><b>CNERGY (Cnergyico PK):</b> انرجی سیکٹر میں کم قیمت اور فعال سکرپٹ۔</li>
+        <li><b>TELE (Telecard Limited):</b> ٹیکنالوجی سیکٹر کا پینی اسٹاک۔</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 5: TAX CALCULATOR
 with tabs[4]:
     st.subheader("🇵🇰 پاکستان ٹیکس و فائلر بچت کیلکولیٹر")
-    st.write("فाइलر اور نان فائلر کے لیے ڈیویڈنڈ اور کیپٹل گین ٹیکس کا تفصیلی حساب کتاب۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>📊 فائلر بمقابلہ نان فائلر ٹیکس بچت گائیڈ</h3>
+    <p>پاکستان کے موجودہ انکم ٹیکس آرڈیننس کے مطابق:</p>
+    <ul>
+        <li><b>ڈیویڈنڈ ٹیکس (Dividend Tax):</b> فائلر کے لیے 15% جبکہ نان فائلر کے لیے 30% ہے۔</li>
+        <li><b>کیپٹل گین ٹیکس (CGT):</b> فائلر کے لیے شیئر ہولڈنگ کی مدت کے لحاظ سے 0% سے 15% تک جبکہ نان فائلر کے لیے دوگنا ہے۔</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 6: DIVIDEND CALENDAR
 with tabs[5]:
     st.subheader("📅 PSX خودکار ڈیویڈنڈ و بک کلوزر کیلنڈر")
-    st.write(" آنے والے کارپوریٹ اعلانات اور ڈیویڈنڈ پی آؤٹ کی تاریخیں۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>📋 آنے والے کارپوریٹ اعلانات اور بک کلوزر</h3>
+    <p>کمپنیوں کی جانب سے منافع (Payout) اور ڈیویڈنڈ کے اعلان کی تازہ ترین شیڈول رپورٹ۔ اپنے پورٹ فولیو کے شیئرز کے ڈیویڈنڈ ٹریک کریں۔</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 7: COMPARE
 with tabs[6]:
     st.subheader("⚖️ دو اسٹاکس کا تقابلی موازنہ")
-    st.write("مختلف کمپنیوں کی کارکردگی کا موازنہ کرنے کا ٹول۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>🔍 کمپنیوں کی کارکردگی کا تقابل</h3>
+    <p>دو مختلف کمپنیوں (مثلاً FFC اور OGDC) کی قیمت، پرافٹ مارجن اور ڈیویڈنڈ ییلڈ کا موازنہ کرنے کا زون۔</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 8: DEMO WALLET
 with tabs[7]:
     st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ (ورچوئل ٹریڈنگ)")
-    st.write("ورچوئل بیلنس کے ساتھ اسٹاک مارکیٹ میں پریکٹس کرنے کا پورٹل۔")
+    st.markdown("""
+    <div class='admin-card'>
+    <h3>💼 فرضی سرمایہ کاری اور پریکٹس پورٹل</h3>
+    <p>1,00,000 روپے کے ورچوئل بیلنس کے ساتھ لائیو مارکیٹ میں شیئر خریدنے اور بیچنے کی پریکٹس کریں۔</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # TAB 9: ADMIN USER MANAGEMENT
 if is_admin:
