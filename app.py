@@ -5,6 +5,7 @@ import os
 import requests
 import base64
 from bs4 import BeautifulSoup
+import plotly.graph_objects as go
 import time
 
 st.set_page_config(
@@ -107,7 +108,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Official Deep-Link Engine Active</div>
+    <div class="ticker-item">🏛️ PSX Direct Scraped Engine Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -163,7 +164,27 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و آفیشل مارکیٹ پورٹل</h1></div>", unsafe_allow_html=True)
+@st.cache_data(ttl=300)
+def fetch_psx_chart_history(symbol):
+    clean_symbol = symbol.upper().replace(".KA", "").strip()
+    url = f"https://dps.psx.com.pk/timeseries/intraday/{clean_symbol}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        res = requests.get(url, headers=headers, timeout=6)
+        if res.status_code == 200:
+            data = res.json()
+            if "data" in data and len(data["data"]) > 0:
+                df = pd.DataFrame(data["data"])
+                df['time'] = pd.to_datetime(df[0], unit='s')
+                df['price'] = df[1].astype(float)
+                df['ema20'] = df['price'].ewm(span=20, adjust=False).mean()
+                df['ema50'] = df['price'].ewm(span=50, adjust=False).mean()
+                return df
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و ان - ایپ لائیو چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -202,7 +223,7 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 tab_list = [
-    "🔍 PSX اسٹاک لائیو مارکیٹ و چارٹ", 
+    "🔍 PSX اسٹاک کینڈل چارٹ و انالائزر", 
     "📂 پورٹ فولیو و زکوۃ", 
     "⚡ کرپٹو AI سگنلز", 
     "🚀 پینی اسٹاکس (under Rs.15)", 
@@ -216,16 +237,16 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: STABLE NATIVE PSX DATA & GUARANTEED LIVE DEEP LINK
+# TAB 1: NATIVE IN-APP CHART (DIRECT PSX API SCRAPED)
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) آفیشل لائیو ڈیٹا")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) لائیو انڈیکیٹر چارٹ")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
         psx_query = st.text_input("کوئی بھی PSX سمبل درج کریں (مثلاً SYS, FFC, OGDC, LUCK, CNERGY):", value="SYS").upper().strip()
     with col_s2:
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_search = st.button("🚀 لائیو مارکیٹ ڈیٹا دیکھیں", use_container_width=True)
+        btn_search = st.button("🚀 لائیو کینڈل چارٹ دکھائیں", use_container_width=True)
         
     if psx_query:
         st.divider()
@@ -240,22 +261,54 @@ with tabs[0]:
         
         st.divider()
         
-        st.markdown(f"### 📈 {psx_query} آفیشل لائیو کینڈل چارٹ و مارکیٹ ڈیپتھ")
-        psx_official_url = f"https://dps.psx.com.pk/company/{psx_query}"
+        st.markdown(f"### 📈 {psx_query} لائیو ڈارک چارٹ (انڈیکیٹر لائنوں کے ساتھ)")
+        df_psx = fetch_psx_chart_history(psx_query)
         
-        st.markdown(f"""
-        <div style="background: #111A2E; padding: 25px; border-radius: 14px; border: 1px solid #00E676; text-align: center; margin-bottom: 20px;">
-            <h3 style="color: #FFFFFF; font-weight: bold;">🏛️ {psx_query} کا ریئل ٹائم کینڈل چارٹ اور والیوم ڈیٹا</h3>
-            <p style="color: #A0AEC0; font-size: 1.05rem;">
-                تمام بیرونی بلاکنگ ایشوز سے پاک، ۱۰۰٪ درست کینڈلز، ڈیپتھ اور ٹرینڈ انڈیکیٹرز (EMA / Moving Averages) دیکھنے کے لیے نیچے والے بٹن پر کلک کریں۔
-            </p>
-            <br>
-            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 15px 35px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 1.15rem; box-shadow: 0 4px 20px rgba(0,230,118,0.5); display: inline-block;">
-                🚀 {psx_query} کا لائیو چارٹ PSX پر کھولیں
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        if not df_psx.empty:
+            fig = go.Figure()
+            
+            # Real PSX Price Line
+            fig.add_trace(go.Scatter(
+                x=df_psx['time'], 
+                y=df_psx['price'], 
+                mode='lines',
+                line=dict(color='#00E676', width=2), 
+                name='Live Price (PKR)'
+            ))
+            
+            # EMA 20 (Yellow Trend Line)
+            fig.add_trace(go.Scatter(
+                x=df_psx['time'], 
+                y=df_psx['ema20'], 
+                mode='lines',
+                line=dict(color='#FFD700', width=1.5, dash='dot'), 
+                name='EMA 20'
+            ))
+            
+            # EMA 50 (Blue Support Line)
+            fig.add_trace(go.Scatter(
+                x=df_psx['time'], 
+                y=df_psx['ema50'], 
+                mode='lines',
+                line=dict(color='#29B6F6', width=1.5, dash='dot'), 
+                name='EMA 50'
+            ))
+
+            fig.update_layout(
+                title=f"{psx_query} PSX Direct Realtime Data Chart",
+                yaxis_title="Price (PKR)",
+                xaxis_title="Time",
+                template="plotly_dark",
+                height=500,
+                margin=dict(l=10, r=10, t=30, b=10),
+                xaxis=dict(fixedrange=True),
+                yaxis=dict(fixedrange=True),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig, use_container_width=True, config={'scrollZoom': False, 'displayModeBar': False})
+        else:
+            st.warning("اس سمبل کا لائیو چارٹ ڈیٹا فی الوقت موصول نہیں ہوا۔")
+            
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -263,8 +316,8 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>انڈیکیٹر چناؤ:</b> PSX چارٹ کے اوپر <b>fx / Indicators</b> پر کلک کر کے Moving Average (EMA) آن کریں۔</li>
-                <li><b>پیلی/سبز لائن:</b> قیمت Moving Average لائن کے اوپر گرین کینڈل بنا رہی ہو۔</li>
+                <li><b>پیلی/نیلی لائن (EMA):</b> جب سبز قیمت والی لائن پیلی (EMA 20) یا نیلی (EMA 50) لائن کے اوپر رہے۔</li>
+                <li><b>ٹرینڈ:</b> لائن کا رخ اوپر کی جانب ہو۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -273,7 +326,7 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>سپورٹ بریک:</b> قیمت کی کینڈل Moving Average لائن سے نیچے چلی جائے تو پرافٹ بک کریں۔</li>
+                <li><b>سپورٹ بریک:</b> جب قیمت والی لائن پیلی یا نیلی لائن سے نیچے آ جائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
