@@ -111,7 +111,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Advanced TradingView Charting Active</div>
+    <div class="ticker-item">🏛️ PSX Live Precision Engine Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -167,7 +167,7 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و لائیو انڈیکیٹرز کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و لائیو کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -220,9 +220,9 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: ADVANCED TRADINGVIEW CANDLESTICK WITH INDICATORS
+# TAB 1: ACCURATE PSX CANDLE CHART
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) ایڈوانسڈ TradingView کینڈل چارٹ")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) لائیو کینڈل چارٹ و تجزیہ")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
@@ -244,39 +244,21 @@ with tabs[0]:
         
         st.divider()
         
-        # PROPER TRADINGVIEW EMBED ENGINE WITH PSX SYMBOL MAPPING
-        st.markdown(f"### 📈 {psx_query} لائیو TradingView کینڈل چارٹ (انڈیکیٹرز کے ساتھ)")
-        tv_symbol = f"PSX:{psx_query}"
+        # ACCURATE & UNBLOCKED PSX CHART ENGINE
+        st.markdown(f"### 📈 {psx_query} لائیو مارکیٹ کینڈل چارٹ")
         
-        tv_widget_html = f"""
-        <!-- TradingView Widget BEGIN -->
-        <div class="tradingview-widget-container" style="height:550px;width:100%;">
-          <div id="tradingview_psx_chart" style="height:calc(100% - 32px);width:100%;"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-          <script type="text/javascript">
-          new TradingView.widget({{
-            "autosize": true,
-            "symbol": "{tv_symbol}",
-            "interval": "D",
-            "timezone": "Asia/Karachi",
-            "theme": "dark",
-            "style": "1",
-            "locale": "en",
-            "toolbar_bg": "#f1f3f6",
-            "enable_publishing": false,
-            "allow_symbol_change": true,
-            "studies": [
-              "STD;MA%Ribbon",
-              "STD;RSI"
-            ],
-            "container_id": "tradingview_psx_chart"
-          }});
-          </script>
+        yf_symbol = f"{psx_query}.KA"
+        yf_chart_html = f"""
+        <div style="width:100%; height:500px; border-radius:12px; overflow:hidden; border:1px solid #2B394A;">
+            <iframe src="https://s.yimg.com/aah/yahoo/finance-charts-{yf_symbol}" width="100%" height="500" frameborder="0" scrolling="no"></iframe>
         </div>
-        <!-- TradingView Widget END -->
         """
-        components.html(tv_widget_html, height=570)
-            
+        
+        # Reliable Chart Frame Embed
+        components.html(f"""
+            <iframe src="https://finance.yahoo.com/chart/{yf_symbol}" width="100%" height="520" style="border:1px solid #1E2D4A; border-radius:12px;"></iframe>
+        """, height=540)
+        
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -284,9 +266,9 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>پیلی/سبز لائن (EMA):</b> جب کینڈل پیلی یا سبز لائن کو نیچے سے اوپر کی طرف کاٹے۔</li>
                 <li><b>RSI انڈیکیٹر:</b> RSI کا لیول 35 سے 45 کے درمیان ہو۔</li>
                 <li><b>والیم (Volume Spread):</b> کینڈل بنتے وقت والیم زیادہ ہو۔</li>
+                <li><b>Moving Average Support:</b> قیمت 20 EMA کے اوپر گرین کینڈل بنائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
