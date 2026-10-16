@@ -6,7 +6,7 @@ import requests
 import base64
 from bs4 import BeautifulSoup
 import yfinance as yf
-import streamlit.components.v1 as components
+import plotly.graph_objects as go
 import time
 import urllib.parse
 
@@ -103,7 +103,6 @@ st.markdown("""
     .psx-header h1 { color: #FFFFFF; font-size: 2.2rem; margin: 0; font-weight: 800; }
     .pros-card { background: #022C1C; border: 1px solid #00E676; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .cons-card { background: #34020B; border: 1px solid #FF1744; padding: 18px; border-radius: 12px; color: #E0E6ED; }
-    .shariah-badge { background: #004D40; color: #00E676; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
     .admin-card { background: #111A2E; border: 1px solid #2B394A; padding: 20px; border-radius: 14px; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
@@ -111,7 +110,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Live Precision Engine Active</div>
+    <div class="ticker-item">🏛️ PSX Professional Plotly Dark Chart Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -167,7 +166,20 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و لائیو کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
+@st.cache_data(ttl=300)
+def get_psx_historical_data(symbol):
+    clean_symbol = symbol.upper().replace(".KA", "").strip()
+    try:
+        df = yf.download(f"{clean_symbol}.KA", period="3mo", interval="1d", progress=False)
+        if not df.empty:
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            return df
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و پروفیشنل ڈارک کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -216,13 +228,13 @@ tab_list = [
     "🧪 ڈیمو ٹریڈنگ وائلٹ"
 ]
 if is_admin:
-    tab_list.append("👥 یوزر مینجمنٹ (ایڈمن)")
+    tab_list.append("👥 یوزر مینجमेंट (ایڈمن)")
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: ACCURATE PSX CANDLE CHART
+# TAB 1: PROFESSIONAL PLOTLY DARK CANDLESTICK WITH INDICATORS
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) لائیو کینڈل چارٹ و تجزیہ")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) پروفیشنل ڈارک کینڈل چارٹ و انڈیکیٹرز")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
@@ -244,21 +256,56 @@ with tabs[0]:
         
         st.divider()
         
-        # ACCURATE & UNBLOCKED PSX CHART ENGINE
-        st.markdown(f"### 📈 {psx_query} لائیو مارکیٹ کینڈل چارٹ")
+        # PROFESSIONAL PLOTLY CANDLESTICK CHART WITH MOVING AVERAGE (EMA) LINES
+        st.markdown(f"### 📈 {psx_query} پروفیشنل ڈارک چارٹ (انڈیکیٹرز کے ساتھ)")
+        df_hist = get_psx_historical_data(psx_query)
         
-        yf_symbol = f"{psx_query}.KA"
-        yf_chart_html = f"""
-        <div style="width:100%; height:500px; border-radius:12px; overflow:hidden; border:1px solid #2B394A;">
-            <iframe src="https://s.yimg.com/aah/yahoo/finance-charts-{yf_symbol}" width="100%" height="500" frameborder="0" scrolling="no"></iframe>
-        </div>
-        """
-        
-        # Reliable Chart Frame Embed
-        components.html(f"""
-            <iframe src="https://finance.yahoo.com/chart/{yf_symbol}" width="100%" height="520" style="border:1px solid #1E2D4A; border-radius:12px;"></iframe>
-        """, height=540)
-        
+        if not df_hist.empty:
+            # Calculate 20 EMA and 50 EMA for technical indicator lines
+            df_hist['EMA20'] = df_hist['Close'].ewm(span=20, adjust=False).mean()
+            df_hist['EMA50'] = df_hist['Close'].ewm(span=50, adjust=False).mean()
+
+            fig = go.Figure()
+            
+            # Candlestick
+            fig.add_trace(go.Candlestick(
+                x=df_hist.index,
+                open=df_hist['Open'],
+                high=df_hist['High'],
+                low=df_hist['Low'],
+                close=df_hist['Close'],
+                name='Market Candles'
+            ))
+            
+            # EMA 20 (Yellow Line)
+            fig.add_trace(go.Scatter(
+                x=df_hist.index, 
+                y=df_hist['EMA20'], 
+                line=dict(color='#FFD700', width=1.5), 
+                name='EMA 20 (Trend)'
+            ))
+            
+            # EMA 50 (Blue Line)
+            fig.add_trace(go.Scatter(
+                x=df_hist.index, 
+                y=df_hist['EMA50'], 
+                line=dict(color='#00E676', width=1.5), 
+                name='EMA 50 (Support)'
+            ))
+
+            fig.update_layout(
+                title=f"{psx_query} Professional Price Action & Trend Indicators",
+                yaxis_title="Price (PKR)",
+                xaxis_title="Date",
+                template="plotly_dark",
+                height=520,
+                margin=dict(l=10, r=10, t=30, b=10),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("اس سمبل کا تاریخی چارٹ ڈیٹا دستیاب نہیں ہے۔")
+            
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -266,9 +313,9 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
+                <li><b>پیلی/سبز لائن (EMA):</b> جب کینڈل پیلی یا سبز لائن کو نیچے سے اوپر کی طرف کاٹے۔</li>
                 <li><b>RSI انڈیکیٹر:</b> RSI کا لیول 35 سے 45 کے درمیان ہو۔</li>
                 <li><b>والیم (Volume Spread):</b> کینڈل بنتے وقت والیم زیادہ ہو۔</li>
-                <li><b>Moving Average Support:</b> قیمت 20 EMA کے اوپر گرین کینڈل بنائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -369,7 +416,7 @@ with tabs[7]:
 # TAB 9: ADMIN USER MANAGEMENT
 if is_admin:
     with tabs[8]:
-        st.subheader("👥 ایڈمن ڈیش بورڈ و یوزر مینجمنٹ پورٹل")
+        st.subheader("👥 ایڈمن ڈیش بورڈ و یوزر مینجमेंट پورٹل")
         st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
         st.markdown("### 📋 تمام رجسٹرڈ یوزرز کی لسٹ")
         u_table_data = []
