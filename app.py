@@ -6,7 +6,7 @@ import requests
 import base64
 from bs4 import BeautifulSoup
 import yfinance as yf
-import plotly.graph_objects as go
+import streamlit.components.v1 as components
 import time
 import urllib.parse
 
@@ -82,7 +82,7 @@ if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
     st.session_state["logged_in"] = True
     st.session_state["user_id"] = saved_user
 
-# Styling
+# Dark Fintech Styling
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -101,9 +101,6 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(0,0,0,0.6); margin-top: 15px; margin-bottom: 20px; text-align: center;
     }
     .psx-header h1 { color: #FFFFFF; font-size: 2.2rem; margin: 0; font-weight: 800; }
-    .crypto-card {
-        background: #0D1527; padding: 22px; border-radius: 16px; border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-    }
     .pros-card { background: #022C1C; border: 1px solid #00E676; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .cons-card { background: #34020B; border: 1px solid #FF1744; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .shariah-badge { background: #004D40; color: #00E676; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
@@ -114,7 +111,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Accurate Plotly Precision Engine Active</div>
+    <div class="ticker-item">🏛️ PSX Advanced TradingView Charting Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -170,20 +167,7 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-@st.cache_data(ttl=300)
-def get_psx_historical_data(symbol):
-    clean_symbol = symbol.upper().replace(".KA", "").strip()
-    try:
-        df = yf.download(f"{clean_symbol}.KA", period="3mo", interval="1d", progress=False)
-        if not df.empty:
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-            return df
-    except Exception:
-        pass
-    return pd.DataFrame()
-
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و درست لائیو کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و لائیو انڈیکیٹرز کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -236,9 +220,9 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: UNIVERSAL PSX PLOTLY CANDLE & ANALYZER
+# TAB 1: ADVANCED TRADINGVIEW CANDLESTICK WITH INDICATORS
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) درست لائیو کینڈل چارٹ و تجزیہ")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) ایڈوانسڈ TradingView کینڈل چارٹ")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
@@ -260,29 +244,38 @@ with tabs[0]:
         
         st.divider()
         
-        st.markdown(f"### 📈 {psx_query} درست لائیو کینڈل چارٹ (Plotly Engine)")
-        df_hist = get_psx_historical_data(psx_query)
+        # PROPER TRADINGVIEW EMBED ENGINE WITH PSX SYMBOL MAPPING
+        st.markdown(f"### 📈 {psx_query} لائیو TradingView کینڈل چارٹ (انڈیکیٹرز کے ساتھ)")
+        tv_symbol = f"PSX:{psx_query}"
         
-        if not df_hist.empty:
-            fig = go.Figure(data=[go.Candlestick(
-                x=df_hist.index,
-                open=df_hist['Open'],
-                high=df_hist['High'],
-                low=df_hist['Low'],
-                close=df_hist['Close'],
-                name='Market Candles'
-            )])
-            fig.update_layout(
-                title=f"{psx_query} Price Action Chart",
-                yaxis_title="Price (PKR)",
-                xaxis_title="Date",
-                template="plotly_dark",
-                height=500,
-                margin=dict(l=10, r=10, t=30, b=10)
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("اس سمبل کا تاریخی چارٹ ڈیٹا دستیاب نہیں ہے۔")
+        tv_widget_html = f"""
+        <!-- TradingView Widget BEGIN -->
+        <div class="tradingview-widget-container" style="height:550px;width:100%;">
+          <div id="tradingview_psx_chart" style="height:calc(100% - 32px);width:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+          <script type="text/javascript">
+          new TradingView.widget({{
+            "autosize": true,
+            "symbol": "{tv_symbol}",
+            "interval": "D",
+            "timezone": "Asia/Karachi",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#f1f3f6",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "studies": [
+              "STD;MA%Ribbon",
+              "STD;RSI"
+            ],
+            "container_id": "tradingview_psx_chart"
+          }});
+          </script>
+        </div>
+        <!-- TradingView Widget END -->
+        """
+        components.html(tv_widget_html, height=570)
             
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
@@ -291,9 +284,9 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
+                <li><b>پیلی/سبز لائن (EMA):</b> جب کینڈل پیلی یا سبز لائن کو نیچے سے اوپر کی طرف کاٹے۔</li>
                 <li><b>RSI انڈیکیٹر:</b> RSI کا لیول 35 سے 45 کے درمیان ہو۔</li>
                 <li><b>والیم (Volume Spread):</b> کینڈل بنتے وقت والیم زیادہ ہو۔</li>
-                <li><b>Moving Average Support:</b> قیمت 20 EMA کے اوپر گرین کینڈل بنائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -302,8 +295,8 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>RSI Overbought:</b> RSI کا لیول 68 سے اوپر چلا جائے۔</li>
-                <li><b>سپورٹ بریک (Support Break):</b> قیمت 20 EMA سے نیچے آئے تو نکل جائیں۔</li>
+                <li><b>RSI Overbought:</b> RSI کا لیول 68 یا 70 سے اوپر چلا جائے۔</li>
+                <li><b>سپورٹ بریک (Support Break):</b> قیمت Moving Average لائن کے نیچے آ جائے تو منافع بک کریں۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -391,12 +384,10 @@ with tabs[7]:
     st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ")
     st.write("ورچوئل بیلنس۔")
 
-# TAB 9: ADMIN USER MANAGEMENT (FULL & ACTIVE)
+# TAB 9: ADMIN USER MANAGEMENT
 if is_admin:
     with tabs[8]:
         st.subheader("👥 ایڈمن ڈیش بورڈ و یوزر مینجمنٹ پورٹل")
-        
-        # 1. User Directory Table
         st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
         st.markdown("### 📋 تمام رجسٹرڈ یوزرز کی لسٹ")
         u_table_data = []
@@ -411,8 +402,6 @@ if is_admin:
         st.markdown("</div>", unsafe_allow_html=True)
         
         col_adm1, col_adm2 = st.columns(2)
-        
-        # 2. Reset / Change User Password
         with col_adm1:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
             st.markdown("### 🔑 کسی بھی یوزر کا پاسورڈ تبدیل کریں")
@@ -429,7 +418,6 @@ if is_admin:
                     st.error("براہِ کرم نیا پاسورڈ درج کریں۔")
             st.markdown("</div>", unsafe_allow_html=True)
             
-        # 3. Add New User Manually
         with col_adm2:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
             st.markdown("### ➕ نیا یوزر ایڈمن پورٹل سے شامل کریں")
