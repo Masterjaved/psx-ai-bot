@@ -5,6 +5,8 @@ import os
 import requests
 import base64
 from bs4 import BeautifulSoup
+import yfinance as yf
+import streamlit.components.v1 as components
 import time
 
 st.set_page_config(
@@ -107,7 +109,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Official Native Engine Active</div>
+    <div class="ticker-item">🏛️ PSX Lightweight Canvas Precision Chart Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -163,7 +165,44 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و آفیشل لائیو پورٹل</h1></div>", unsafe_allow_html=True)
+@st.cache_data(ttl=300)
+def get_psx_lightweight_data(symbol):
+    clean_symbol = symbol.upper().replace(".KA", "").strip()
+    try:
+        df = yf.download(f"{clean_symbol}.KA", period="6mo", interval="1d", progress=False)
+        if not df.empty:
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            df = df.reset_index()
+            df['time'] = df['Date'].dt.strftime('%Y-%m-%d')
+            
+            # EMA calculations
+            df['ema20'] = df['Close'].ewm(span=20, adjust=False).mean()
+            df['ema50'] = df['Close'].ewm(span=50, adjust=False).mean()
+            
+            candles = []
+            ema20_line = []
+            ema50_line = []
+            
+            for _, row in df.iterrows():
+                candles.append({
+                    "time": row['time'],
+                    "open": float(row['Open']),
+                    "high": float(row['High']),
+                    "low": float(row['Low']),
+                    "close": float(row['Close'])
+                })
+                if not pd.isna(row['ema20']):
+                    ema20_line.append({"time": row['time'], "value": float(row['ema20'])})
+                if not pd.isna(row['ema50']):
+                    ema50_line.append({"time": row['time'], "value": float(row['ema50'])})
+                    
+            return candles, ema20_line, ema50_line
+    except Exception:
+        pass
+    return [], [], []
+
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و لائیو ٹریڈنگ چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -202,7 +241,7 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 tab_list = [
-    "🔍 PSX اسٹاک لائیو مارکیٹ و چارٹ", 
+    "🔍 PSX اسٹاک کینڈل چارٹ و انالائزر", 
     "📂 پورٹ فولیو و زکوۃ", 
     "⚡ کرپٹو AI سگنلز", 
     "🚀 پینی اسٹاکس (under Rs.15)", 
@@ -216,16 +255,16 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: OFFICIAL PSX NATIVE MARKET VIEW & DIRECT LINK
+# TAB 1: TRADINGVIEW LIGHTWEIGHT CANVAS ENGINE (NATIVE IN-APP)
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) آفیشل لائیو مارکیٹ ڈیٹا")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) لائیو کینڈل چارٹ و انڈیکیٹرز")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
         psx_query = st.text_input("کوئی بھی PSX سمبل درج کریں (مثلاً SYS, FFC, OGDC, LUCK, CNERGY):", value="SYS").upper().strip()
     with col_s2:
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_search = st.button("🚀 لائیو مارکیٹ ڈیٹا دیکھیں", use_container_width=True)
+        btn_search = st.button("🚀 لائیو کینڈل چارٹ دکھائیں", use_container_width=True)
         
     if psx_query:
         st.divider()
@@ -240,19 +279,50 @@ with tabs[0]:
         
         st.divider()
         
-        # DIRECT OFFICIAL PSX LINK & PORTAL WIDGET
-        st.markdown(f"### 📈 {psx_query} کا آفیشل پاکستان اسٹاک ایکسچینج لائیو چارٹ و ڈیٹا")
-        psx_official_url = f"https://dps.psx.com.pk/company/{psx_query}"
+        st.markdown(f"### 📈 {psx_query} لائیو کینڈل چارٹ (انڈیکیٹر لائنوں کے ساتھ)")
         
-        st.markdown(f"""
-        <div style="background: #111A2E; padding: 25px; border-radius: 14px; border: 1px solid #00E676; text-align: center; margin-bottom: 20px;">
-            <h3>🏛️ {psx_query} کا لائیو مارکیٹ اور ریئل ٹائم چارٹ</h3>
-            <p style="color: #A0AEC0; font-size: 1.05rem;">یہ بٹن آپ کو براہِ راست پاکستان اسٹاک ایکسچینج (PSX) کے آفیشل لائیو پیج پر لے جائے گا جہاں بالکل KTrade کی طرح ۱۰۰٪ مستند کینڈلز، ڈیپتھ (Market Depth) اور ریئل ٹائم ریٹس موجود ہیں۔</p>
-            <br>
-            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 14px 30px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,230,118,0.4);">🔗 PSX کی آفیشل سائیڈ پر لائیو چارٹ کھولیں</a>
-        </div>
-        """, unsafe_allow_html=True)
+        candles_data, ema20_data, ema50_data = get_psx_lightweight_data(psx_query)
         
+        if candles_data:
+            canvas_html = f"""
+            <div id="chart_container" style="width:100%; height:500px; border-radius:12px; background:#0D1527; border:1px solid #1E2D4A;"></div>
+            <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+            <script>
+                const chartOptions = {{
+                    width: document.getElementById('chart_container').clientWidth,
+                    height: 500,
+                    layout: {{ backgroundColor: '#0D1527', textColor: '#E0E6ED' }},
+                    grid: {{ vertLines: {{ color: '#1E2D4A' }}, horzLines: {{ color: '#1E2D4A' }} }},
+                    crosshair: {{ mode: LightweightCharts.CrosshairMode.Normal }},
+                    priceScale: {{ borderColor: '#2B394A' }},
+                    timeScale: {{ borderColor: '#2B394A' }},
+                }};
+                const chart = LightweightCharts.createChart(document.getElementById('chart_container'), chartOptions);
+                
+                // Candlestick Series
+                const candlestickSeries = chart.addCandlestickSeries({{
+                    upColor: '#00E676', downColor: '#FF1744', borderVisible: false,
+                    wickUpColor: '#00E676', wickDownColor: '#FF1744'
+                }});
+                candlestickSeries.setData({json.dumps(candles_data)});
+                
+                // EMA 20 (Yellow Trend Line)
+                const ema20Series = chart.addLineSeries({{ color: '#FFD700', lineWidth: 2, title: 'EMA 20' }});
+                ema20Series.setData({json.dumps(ema20_data)});
+                
+                // EMA 50 (Green Support Line)
+                const ema50Series = chart.addLineSeries({{ color: '#00E676', lineWidth: 2, title: 'EMA 50' }});
+                ema50Series.setData({json.dumps(ema50_data)});
+                
+                window.addEventListener('resize', () => {{
+                    chart.applyOptions({{ width: document.getElementById('chart_container').clientWidth }});
+                }});
+            </script>
+            """
+            components.html(canvas_html, height=520)
+        else:
+            st.warning("اس سمبل کا تاریخی چارٹ ڈیٹا فی الوقت دستیاب نہیں ہے۔")
+            
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -260,9 +330,8 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>مضبوط سپورٹ:</b> شیئر اپنی اہم سپورٹ پر ہو۔</li>
-                <li><b>انڈیکیٹرز (Indicators):</b> PSX چارٹ کے اوپر <b>fx</b> پر کلک کر کے Moving Average آن کریں۔</li>
-                <li><b>والیم:</b> مارکیٹ میں خرید کا والیم زیادہ ہو۔</li>
+                <li><b>پیلی/سبز لائن (EMA):</b> جب کینڈل پیلی (EMA 20) یا سبز (EMA 50) لائن کے اوپر گرین کینڈل بنائے۔</li>
+                <li><b>والیم Spread:</b> کینڈل بنتے وقت والیم میں اضافہ ہو۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -271,8 +340,7 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>منافع کا حصول:</b> ہدف (Target) پورا ہونے پر پرافٹ بک کریں۔</li>
-                <li><b>رجحان کی تبدیلی:</b> کینڈل Moving Average لائن سے نیچے آئے تو ایگزٹ کریں۔</li>
+                <li><b>سپورٹ بریک:</b> جب کینڈل پیلی لائن کو نیچے توڑ کر ریڈ کینڈل بنائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
