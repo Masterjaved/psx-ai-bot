@@ -5,7 +5,10 @@ import os
 import requests
 import base64
 from bs4 import BeautifulSoup
+import yfinance as yf
+import plotly.graph_objects as go
 import time
+import urllib.parse
 
 st.set_page_config(
     page_title="PSX & Crypto Institutional Precision Engine",
@@ -79,7 +82,7 @@ if saved_user and saved_user in users_db and not st.session_state["logged_in"]:
     st.session_state["logged_in"] = True
     st.session_state["user_id"] = saved_user
 
-# Dark Fintech Styling
+# Styling
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
@@ -98,8 +101,12 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(0,0,0,0.6); margin-top: 15px; margin-bottom: 20px; text-align: center;
     }
     .psx-header h1 { color: #FFFFFF; font-size: 2.2rem; margin: 0; font-weight: 800; }
+    .crypto-card {
+        background: #0D1527; padding: 22px; border-radius: 16px; border: 1px solid #1E2D4A; box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
     .pros-card { background: #022C1C; border: 1px solid #00E676; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .cons-card { background: #34020B; border: 1px solid #FF1744; padding: 18px; border-radius: 12px; color: #E0E6ED; }
+    .shariah-badge { background: #004D40; color: #00E676; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
     .admin-card { background: #111A2E; border: 1px solid #2B394A; padding: 20px; border-radius: 14px; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
@@ -107,7 +114,7 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Official Native Engine Active</div>
+    <div class="ticker-item">🏛️ PSX Accurate Plotly Precision Engine Active</div>
     <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
     <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
@@ -163,7 +170,20 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و آفیشل لائیو پورٹل</h1></div>", unsafe_allow_html=True)
+@st.cache_data(ttl=300)
+def get_psx_historical_data(symbol):
+    clean_symbol = symbol.upper().replace(".KA", "").strip()
+    try:
+        df = yf.download(f"{clean_symbol}.KA", period="3mo", interval="1d", progress=False)
+        if not df.empty:
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+            return df
+    except Exception:
+        pass
+    return pd.DataFrame()
+
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و درست لائیو کینڈل چارٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -202,7 +222,7 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 tab_list = [
-    "🔍 PSX اسٹاک لائیو مارکیٹ و چارٹ", 
+    "🔍 PSX اسٹاک کینڈل چارٹ و انالائزر", 
     "📂 پورٹ فولیو و زکوۃ", 
     "⚡ کرپٹو AI سگنلز", 
     "🚀 پینی اسٹاکس (under Rs.15)", 
@@ -216,16 +236,16 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: OFFICIAL PSX NATIVE MARKET VIEW & DIRECT LINK
+# TAB 1: UNIVERSAL PSX PLOTLY CANDLE & ANALYZER
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) آفیشل لائیو مارکیٹ ڈیٹا")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) درست لائیو کینڈل چارٹ و تجزیہ")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
         psx_query = st.text_input("کوئی بھی PSX سمبل درج کریں (مثلاً SYS, FFC, OGDC, LUCK, CNERGY):", value="SYS").upper().strip()
     with col_s2:
         st.markdown("<br>", unsafe_allow_html=True)
-        btn_search = st.button("🚀 لائیو مارکیٹ ڈیٹا دیکھیں", use_container_width=True)
+        btn_search = st.button("🚀 لائیو کینڈل چارٹ دکھائیں", use_container_width=True)
         
     if psx_query:
         st.divider()
@@ -240,19 +260,30 @@ with tabs[0]:
         
         st.divider()
         
-        # DIRECT OFFICIAL PSX LINK & PORTAL WIDGET
-        st.markdown(f"### 📈 {psx_query} کا آفیشل پاکستان اسٹاک ایکسچینج لائیو چارٹ و ڈیٹا")
-        psx_official_url = f"https://dps.psx.com.pk/company/{psx_query}"
+        st.markdown(f"### 📈 {psx_query} درست لائیو کینڈل چارٹ (Plotly Engine)")
+        df_hist = get_psx_historical_data(psx_query)
         
-        st.markdown(f"""
-        <div style="background: #111A2E; padding: 25px; border-radius: 14px; border: 1px solid #00E676; text-align: center; margin-bottom: 20px;">
-            <h3>🏛️ {psx_query} کا لائیو مارکیٹ اور ریئل ٹائم چارٹ</h3>
-            <p style="color: #A0AEC0; font-size: 1.05rem;">یہ بٹن آپ کو براہِ راست پاکستان اسٹاک ایکسچینج (PSX) کے آفیشل لائیو پیج پر لے جائے گا جہاں بالکل KTrade کی طرح ۱۰۰٪ مستند کینڈلز، ڈیپتھ (Market Depth) اور ریئل ٹائم ریٹس موجود ہیں۔</p>
-            <br>
-            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 14px 30px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,230,118,0.4);">🔗 PSX کی آفیشل سائیڈ پر لائیو چارٹ کھولیں</a>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        if not df_hist.empty:
+            fig = go.Figure(data=[go.Candlestick(
+                x=df_hist.index,
+                open=df_hist['Open'],
+                high=df_hist['High'],
+                low=df_hist['Low'],
+                close=df_hist['Close'],
+                name='Market Candles'
+            )])
+            fig.update_layout(
+                title=f"{psx_query} Price Action Chart",
+                yaxis_title="Price (PKR)",
+                xaxis_title="Date",
+                template="plotly_dark",
+                height=500,
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("اس سمبل کا تاریخی چارٹ ڈیٹا دستیاب نہیں ہے۔")
+            
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -260,9 +291,9 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>مضبوط سپورٹ:</b> شیئر اپنی اہم سپورٹ پر ہو۔</li>
-                <li><b>انڈیکیٹرز (Indicators):</b> PSX چارٹ کے اوپر <b>fx</b> پر کلک کر کے Moving Average آن کریں۔</li>
-                <li><b>والیم:</b> مارکیٹ میں خرید کا والیم زیادہ ہو۔</li>
+                <li><b>RSI انڈیکیٹر:</b> RSI کا لیول 35 سے 45 کے درمیان ہو۔</li>
+                <li><b>والیم (Volume Spread):</b> کینڈل بنتے وقت والیم زیادہ ہو۔</li>
+                <li><b>Moving Average Support:</b> قیمت 20 EMA کے اوپر گرین کینڈل بنائے۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -271,8 +302,8 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>منافع کا حصول:</b> ہدف (Target) پورا ہونے پر پرافٹ بک کریں۔</li>
-                <li><b>رجحان کی تبدیلی:</b> کینڈل Moving Average لائن سے نیچے آئے تو ایگزٹ کریں۔</li>
+                <li><b>RSI Overbought:</b> RSI کا لیول 68 سے اوپر چلا جائے۔</li>
+                <li><b>سپورٹ بریک (Support Break):</b> قیمت 20 EMA سے نیچے آئے تو نکل جائیں۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -360,10 +391,12 @@ with tabs[7]:
     st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ")
     st.write("ورچوئل بیلنس۔")
 
-# TAB 9: ADMIN USER MANAGEMENT
+# TAB 9: ADMIN USER MANAGEMENT (FULL & ACTIVE)
 if is_admin:
     with tabs[8]:
         st.subheader("👥 ایڈمن ڈیش بورڈ و یوزر مینجمنٹ پورٹل")
+        
+        # 1. User Directory Table
         st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
         st.markdown("### 📋 تمام رجسٹرڈ یوزرز کی لسٹ")
         u_table_data = []
@@ -378,6 +411,8 @@ if is_admin:
         st.markdown("</div>", unsafe_allow_html=True)
         
         col_adm1, col_adm2 = st.columns(2)
+        
+        # 2. Reset / Change User Password
         with col_adm1:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
             st.markdown("### 🔑 کسی بھی یوزر کا پاسورڈ تبدیل کریں")
@@ -394,6 +429,7 @@ if is_admin:
                     st.error("براہِ کرم نیا پاسورڈ درج کریں۔")
             st.markdown("</div>", unsafe_allow_html=True)
             
+        # 3. Add New User Manually
         with col_adm2:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
             st.markdown("### ➕ نیا یوزر ایڈمن پورٹل سے شامل کریں")
