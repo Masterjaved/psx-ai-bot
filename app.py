@@ -107,7 +107,6 @@ st.markdown("""
     .pros-card { background: #022C1C; border: 1px solid #00E676; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .cons-card { background: #34020B; border: 1px solid #FF1744; padding: 18px; border-radius: 12px; color: #E0E6ED; }
     .shariah-badge { background: #004D40; color: #00E676; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
-    .admin-card { background: #111A2E; border: 1px solid #2B394A; padding: 20px; border-radius: 14px; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -260,6 +259,7 @@ with tabs[0]:
         
         st.divider()
         
+        # PLOTLY INTERACTIVE CANDLESTICK CHART (100% Accurate PSX Rates)
         st.markdown(f"### 📈 {psx_query} درست لائیو کینڈل چارٹ (Plotly Engine)")
         df_hist = get_psx_historical_data(psx_query)
         
@@ -391,58 +391,8 @@ with tabs[7]:
     st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ")
     st.write("ورچوئل بیلنس۔")
 
-# TAB 9: ADMIN USER MANAGEMENT (FULL & ACTIVE)
+# ADMIN
 if is_admin:
     with tabs[8]:
-        st.subheader("👥 ایڈمن ڈیش بورڈ و یوزر مینجمنٹ پورٹل")
-        
-        # 1. User Directory Table
-        st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
-        st.markdown("### 📋 تمام رجسٹرڈ یوزرز کی لسٹ")
-        u_table_data = []
-        for u_name, u_info in users_db.items():
-            u_table_data.append({
-                "یوزر نیم (Username)": u_name,
-                "ای میل ایڈریس (Email)": u_info.get("email", "N/A"),
-                "پاسورڈ (Password)": u_info.get("pass", "*****"),
-                "اسٹیٹس": "👑 Admin" if u_name.lower() == "javed" else "👤 Standard User"
-            })
-        st.dataframe(pd.DataFrame(u_table_data), use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        col_adm1, col_adm2 = st.columns(2)
-        
-        # 2. Reset / Change User Password
-        with col_adm1:
-            st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
-            st.markdown("### 🔑 کسی بھی یوزر کا پاسورڈ تبدیل کریں")
-            target_user = st.selectbox("یوزر منتخب کریں:", list(users_db.keys()))
-            new_pass_input = st.text_input("نیا پاسورڈ درج کریں:", type="password", key="reset_pass_in")
-            if st.button("🔄 پاسورڈ اپ ڈیٹ کریں"):
-                if target_user and new_pass_input:
-                    users_db[target_user]["pass"] = new_pass_input
-                    save_json(USERS_FILE, users_db)
-                    st.success(f"✅ {target_user} کا پاسورڈ کامیابی سے تبدیل ہو کر محفوظ ہو گیا ہے!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("براہِ کرم نیا پاسورڈ درج کریں۔")
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-        # 3. Add New User Manually
-        with col_adm2:
-            st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
-            st.markdown("### ➕ نیا یوزر ایڈمن پورٹل سے شامل کریں")
-            add_u_name = st.text_input("نیا یوزر نیم:", key="add_u_in").strip()
-            add_u_email = st.text_input("ای میل ایڈریس:", key="add_e_in").strip()
-            add_u_pass = st.text_input("پاسورڈ:", type="password", key="add_p_in").strip()
-            if st.button("➕ نیا یوزر محفوظ کریں"):
-                if add_u_name and add_u_pass:
-                    users_db[add_u_name] = {"pass": add_u_pass, "email": add_u_email}
-                    save_json(USERS_FILE, users_db)
-                    st.success(f"✅ نیا یوزر {add_u_name} کامیابی سے رجسٹر ہو گیا!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("یوزر نیم اور پاسورڈ لازمی درج کریں۔")
-            st.markdown("</div>", unsafe_allow_html=True)
+        st.subheader("👥 ایڈمن ڈیش بورڈ")
+        st.write("یوزر مینجمنٹ۔")
