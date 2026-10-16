@@ -6,7 +6,6 @@ import requests
 import base64
 from bs4 import BeautifulSoup
 import time
-import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="PSX & Crypto Institutional Precision Engine",
@@ -117,8 +116,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 ALL_PSX_STOCKS = [
-    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC',
-    'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI',
+    'FFC', 'OGDC', 'LUCK', 'HUBC', 'PPL', 'ENGRO', 'EFERT', 'SYS', 'MLCF', 'DGKC', 
+    'POL', 'MEBL', 'PAEL', 'AIRLINK', 'FCCL', 'PRL', 'SHEL', 'SEARL', 'AVN', 'MARI', 
     'PSO', 'CNERGY', 'KEL', 'TELE', 'WTL', 'HUMNL', 'TRG', 'BYCO', 'PACE', 'SILK'
 ]
 
@@ -164,67 +163,6 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-@st.cache_data(ttl=300)
-def fetch_psx_history(symbol):
-    """PSX سے روزانہ (EOD) ہسٹری ڈیٹا لے کر DataFrame بناتا ہے۔"""
-    clean = symbol.upper().replace(".KA", "").strip()
-    url = f"https://dps.psx.com.pk/timeseries/eod/{clean}"
-    headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-    try:
-        r = requests.get(url, headers=headers, timeout=10)
-        if r.status_code == 200:
-            rows = r.json().get("data", [])
-            if not rows:
-                return pd.DataFrame()
-            ncols = len(rows[0])
-            if ncols >= 4:
-                # [timestamp, close, volume, open]
-                df = pd.DataFrame([row[:4] for row in rows],
-                                  columns=["ts", "close", "volume", "open"])
-            else:
-                # [timestamp, close, volume] - open نہ ہو تو پچھلے دن کی close استعمال ہوگی
-                df = pd.DataFrame([row[:3] for row in rows],
-                                  columns=["ts", "close", "volume"])
-                df["open"] = df["close"].shift(1).fillna(df["close"])
-            df["close"] = pd.to_numeric(df["close"], errors="coerce")
-            df["open"] = pd.to_numeric(df["open"], errors="coerce")
-            df["volume"] = pd.to_numeric(df["volume"], errors="coerce").fillna(0)
-            df = df.dropna(subset=["close", "open"])
-            df["date"] = pd.to_datetime(df["ts"], unit="s")
-            df = df.sort_values("date").reset_index(drop=True)
-            df["high"] = df[["open", "close"]].max(axis=1)
-            df["low"] = df[["open", "close"]].min(axis=1)
-            df["EMA20"] = df["close"].ewm(span=20, adjust=False).mean()
-            df["SMA50"] = df["close"].rolling(50).mean()
-            return df
-    except Exception:
-        pass
-    return pd.DataFrame()
-
-def build_candlestick(hist, symbol, days):
-    view = hist.tail(days)
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=view["date"], open=view["open"], high=view["high"],
-        low=view["low"], close=view["close"], name=symbol,
-        increasing_line_color="#00E676", decreasing_line_color="#FF1744"))
-    fig.add_trace(go.Scatter(x=view["date"], y=view["EMA20"], name="EMA 20",
-                             line=dict(color="#FFD700", width=1.5)))
-    fig.add_trace(go.Scatter(x=view["date"], y=view["SMA50"], name="SMA 50",
-                             line=dict(color="#00B0FF", width=1.5)))
-    fig.add_trace(go.Bar(x=view["date"], y=view["volume"], name="Volume",
-                         marker_color="rgba(150,160,180,0.35)", yaxis="y2"))
-    fig.update_layout(
-        template="plotly_dark", height=520,
-        xaxis_rangeslider_visible=False,
-        margin=dict(l=10, r=10, t=30, b=10),
-        paper_bgcolor="#080C14", plot_bgcolor="#080C14",
-        legend=dict(orientation="h", y=1.05),
-        yaxis=dict(domain=[0.22, 1.0]),
-        yaxis2=dict(domain=[0.0, 0.18], showgrid=False),
-    )
-    return fig
-
 st.markdown("<div class='psx-header'><h1>🏛 PSX AI و آفیشل مارکیٹ پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
@@ -264,13 +202,13 @@ curr_user = st.session_state["user_id"]
 is_admin = (curr_user.lower() == "javed")
 
 tab_list = [
-    "🔍 PSX اسٹاک لائیو مارکیٹ و چارٹ",
-    "📂 پورٹ فولیو و زکوۃ",
-    "⚡ کرپٹو AI سگنلز",
-    "🚀 پینی اسٹاکس (under Rs.15)",
-    "🇵🇰 ٹیکس و فائلر کیلکولیٹر",
-    "📅 PSX ڈیویڈنڈ کیلنڈر",
-    "⚖️ اسٹاک موازنہ",
+    "🔍 PSX اسٹاک لائیو مارکیٹ و چارٹ", 
+    "📂 پورٹ فولیو و زکوۃ", 
+    "⚡ کرپٹو AI سگنلز", 
+    "🚀 پینی اسٹاکس (under Rs.15)", 
+    "🇵🇰 ٹیکس و فائلر کیلکولیٹر", 
+    "📅 PSX ڈیویڈنڈ کیلنڈر", 
+    "⚖️ اسٹاک موازنہ", 
     "🧪 ڈیمو ٹریڈنگ وائلٹ"
 ]
 if is_admin:
@@ -278,48 +216,46 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: PSX DATA + NATIVE CANDLESTICK CHART
+# TAB 1: STABLE NATIVE PSX DATA & GUARANTEED LIVE DEEP LINK
 with tabs[0]:
     st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) آفیشل لائیو ڈیٹا")
-
+    
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
         psx_query = st.text_input("کوئی بھی PSX سمبل درج کریں (مثلاً SYS, FFC, OGDC, LUCK, CNERGY):", value="SYS").upper().strip()
     with col_s2:
         st.markdown("<br>", unsafe_allow_html=True)
         btn_search = st.button("🚀 لائیو مارکیٹ ڈیٹا دیکھیں", use_container_width=True)
-
+        
     if psx_query:
         st.divider()
         live_info = fetch_psx_live_data(psx_query)
         div_details = fetch_psx_single_dividend(psx_query)
         is_shariah = "🌙 KMI-30 Shariah Compliant (حلال)" if psx_query in SHARIAH_COMPLIANT_STOCKS else "🏢 Regular Equity"
-
+        
         m1, m2, m3 = st.columns(3)
         m1.metric("کمپنی / سمبل", f"{live_info['symbol']}")
         m2.metric("لائیو مارکیٹ قیمت", f"Rs. {live_info['price']:,.2f}" if live_info['price'] > 0 else "ڈیٹا لوڈ ہو رہا ہے")
         m3.metric("شرعی حیثیت", is_shariah)
-
+        
         st.divider()
-
-        st.markdown(f"### 📈 {psx_query} کینڈل چارٹ (EMA 20 / SMA 50 کے ساتھ)")
-        range_label = st.radio(
-            "مدت منتخب کریں:",
-            ["1 ماہ", "3 ماہ", "6 ماہ", "1 سال", "تمام"],
-            index=2, horizontal=True, key="chart_range"
-        )
-        range_days = {"1 ماہ": 22, "3 ماہ": 66, "6 ماہ": 132, "1 سال": 264, "تمام": 100000}[range_label]
-
-        hist = fetch_psx_history(psx_query)
-        if not hist.empty:
-            st.plotly_chart(build_candlestick(hist, psx_query, range_days), use_container_width=True)
-            st.caption("نوٹ: PSX روزانہ ڈیٹا میں High/Low الگ نہیں دیتا، اس لیے بتیاں (wicks) Open/Close سے بنائی گئی ہیں۔")
-        else:
-            st.warning("⚠️ چارٹ ڈیٹا لوڈ نہیں ہو سکا۔ سمبل چیک کریں یا کچھ دیر بعد دوبارہ کوشش کریں۔")
-
-        st.link_button(f"🏛️ {psx_query} PSX کی آفیشل سائٹ پر کھولیں",
-                       f"https://dps.psx.com.pk/company/{psx_query}")
-
+        
+        st.markdown(f"### 📈 {psx_query} آفیشل لائیو کینڈل چارٹ و مارکیٹ ڈیپتھ")
+        psx_official_url = f"https://dps.psx.com.pk/company/{psx_query}"
+        
+        st.markdown(f"""
+        <div style="background: #111A2E; padding: 25px; border-radius: 14px; border: 1px solid #00E676; text-align: center; margin-bottom: 20px;">
+            <h3 style="color: #FFFFFF; font-weight: bold;">🏛️ {psx_query} کا ریئل ٹائم کینڈل چارٹ اور والیوم ڈیٹا</h3>
+            <p style="color: #A0AEC0; font-size: 1.05rem;">
+                تمام بیرونی بلاکنگ ایشوز سے پاک، ۱۰۰٪ درست کینڈلز، ڈیپتھ اور ٹرینڈ انڈیکیٹرز (EMA / Moving Averages) دیکھنے کے لیے نیچے والے بٹن پر کلک کریں۔
+            </p>
+            <br>
+            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 15px 35px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 1.15rem; box-shadow: 0 4px 20px rgba(0,230,118,0.5); display: inline-block;">
+                🚀 {psx_query} کا لائیو چارٹ PSX پر کھولیں
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("### 🎯 خرید و فروخت کے لیے ضروری شواہد (Trading Checklist)")
         col_check1, col_check2 = st.columns(2)
         with col_check1:
@@ -327,8 +263,8 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>پیلی لائن (EMA 20):</b> قیمت اس لائن کے اوپر ہو اور گرین کینڈلز بن رہی ہوں۔</li>
-                <li><b>نیلی لائن (SMA 50):</b> EMA 20 اس کے اوپر نکل جائے تو رجحان مضبوط سمجھا جاتا ہے۔</li>
+                <li><b>انڈیکیٹر چناؤ:</b> PSX چارٹ کے اوپر <b>fx / Indicators</b> پر کلک کر کے Moving Average (EMA) آن کریں۔</li>
+                <li><b>پیلی/سبز لائن:</b> قیمت Moving Average لائن کے اوپر گرین کینڈل بنا رہی ہو۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -337,11 +273,11 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>سپورٹ بریک:</b> قیمت EMA 20 سے نیچے بند ہو جائے تو پرافٹ بک کرنے پر غور کریں۔</li>
+                <li><b>سپورٹ بریک:</b> قیمت کی کینڈل Moving Average لائن سے نیچے چلی جائے تو پرافٹ بک کریں۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
-
+            
         st.divider()
         st.markdown(f"### 📋 {psx_query} خوبیاں، خامیاں و ڈیویڈنڈ تفاصیل")
         col_pc1, col_pc2 = st.columns(2)
@@ -441,7 +377,7 @@ if is_admin:
             })
         st.dataframe(pd.DataFrame(u_table_data), use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
-
+        
         col_adm1, col_adm2 = st.columns(2)
         with col_adm1:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
@@ -458,7 +394,7 @@ if is_admin:
                 else:
                     st.error("براہِ کرم نیا پاسورڈ درج کریں۔")
             st.markdown("</div>", unsafe_allow_html=True)
-
+            
         with col_adm2:
             st.markdown("<div class='admin-card'>", unsafe_allow_html=True)
             st.markdown("### ➕ نیا یوزر ایڈمن پورٹل سے شامل کریں")
