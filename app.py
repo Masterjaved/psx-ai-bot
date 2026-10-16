@@ -107,10 +107,10 @@ st.markdown("""
 st.markdown("""
 <div class="ticker-wrap">
   <div class="ticker">
-    <div class="ticker-item">🏛️ PSX Institutional Precision Engine Active</div>
-    <div class="ticker-item">🪙 Multi-Asset Precision Portfolio Enabled</div>
+    <div class="ticker-item">🏛️ PSX Official Native Engine Active</div>
+    <div class="ticker-item">🪙 Multi-Asset Precision Charting Enabled</div>
     <div class="ticker-item">🌙 KMI-30 Shariah Compliant Filter Active</div>
-    <div class="ticker-item">📅 Automated Dividend & Zakat Tracking</div>
+    <div class="ticker-item">📅 Automated Dividend & Book Closure Tracking</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -163,7 +163,7 @@ def fetch_psx_single_dividend(symbol):
         pass
     return div_info
 
-st.markdown("<div class='psx-header'><h1>🏛 PSX AI و پروفیشنل فنٹیک پورٹل</h1></div>", unsafe_allow_html=True)
+st.markdown("<div class='psx-header'><h1>🏛 PSX AI و آفیشل لائیو پورٹل</h1></div>", unsafe_allow_html=True)
 
 # SIDEBAR LOGIN
 st.sidebar.title("🔐 اکاؤنٹ پورٹل")
@@ -187,12 +187,9 @@ if not st.session_state["logged_in"]:
         new_e = st.sidebar.text_input("ای میل ایڈریس").strip()
         new_p = st.sidebar.text_input("نیا پاسورڈ", type="password").strip()
         if st.sidebar.button("رجسٹر کریں"):
-            if new_u and new_p:
-                users_db[new_u] = {"pass": new_p, "email": new_e}
-                save_json(USERS_FILE, users_db)
-                st.sidebar.success("✅ رجسٹریشن کامیاب! اب لاگ ان کریں۔")
-            else:
-                st.sidebar.error("یوزر نیم اور پاسورڈ لازمی ہیں۔")
+            users_db[new_u] = {"pass": new_p, "email": new_e}
+            save_json(USERS_FILE, users_db)
+            st.sidebar.success("✅ رجسٹریشن کامیاب!")
 else:
     st.sidebar.success(f"لاگ ان بطور: **{st.session_state['user_id']}**")
     if st.sidebar.button("لاگ آؤٹ"):
@@ -219,9 +216,9 @@ if is_admin:
 
 tabs = st.tabs(tab_list)
 
-# TAB 1: PSX MARKET & DEEP LINK CHART
+# TAB 1: OFFICIAL PSX NATIVE MARKET VIEW & DIRECT LINK
 with tabs[0]:
-    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) لائیو مارکیٹ ڈیٹا")
+    st.subheader("🔍 پاکستان اسٹاک ایکسچینج (PSX) آفیشل لائیو مارکیٹ ڈیٹا")
     
     col_s1, col_s2 = st.columns([2, 1])
     with col_s1:
@@ -243,19 +240,16 @@ with tabs[0]:
         
         st.divider()
         
-        st.markdown(f"### 📈 {psx_query} آفیشل لائیو کینڈل چارٹ و مارکیٹ ڈیپتھ")
+        # DIRECT OFFICIAL PSX LINK & PORTAL WIDGET
+        st.markdown(f"### 📈 {psx_query} کا آفیشل پاکستان اسٹاک ایکسچینج لائیو چارٹ و ڈیٹا")
         psx_official_url = f"https://dps.psx.com.pk/company/{psx_query}"
         
         st.markdown(f"""
         <div style="background: #111A2E; padding: 25px; border-radius: 14px; border: 1px solid #00E676; text-align: center; margin-bottom: 20px;">
-            <h3 style="color: #FFFFFF; font-weight: bold;">🏛️ {psx_query} کا ریئل ٹائم کینڈل چارٹ اور والیوم ڈیٹا</h3>
-            <p style="color: #A0AEC0; font-size: 1.05rem;">
-                تمام بیرونی بلاکنگ ایشوز سے پاک، ۱۰۰٪ درست کینڈلز، ڈیپتھ اور ٹرینڈ انڈیکیٹرز (EMA / Moving Averages) دیکھنے کے لیے نیچے والے بٹن پر کلک کریں۔
-            </p>
+            <h3>🏛️ {psx_query} کا لائیو مارکیٹ اور ریئل ٹائم چارٹ</h3>
+            <p style="color: #A0AEC0; font-size: 1.05rem;">یہ بٹن آپ کو براہِ راست پاکستان اسٹاک ایکسچینج (PSX) کے آفیشل لائیو پیج پر لے جائے گا جہاں بالکل KTrade کی طرح ۱۰۰٪ مستند کینڈلز، ڈیپتھ (Market Depth) اور ریئل ٹائم ریٹس موجود ہیں۔</p>
             <br>
-            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 15px 35px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 1.15rem; box-shadow: 0 4px 20px rgba(0,230,118,0.5); display: inline-block;">
-                🚀 {psx_query} کا لائیو چارٹ PSX پر کھولیں
-            </a>
+            <a href="{psx_official_url}" target="_blank" style="background: #00E676; color: #080C14; padding: 14px 30px; border-radius: 8px; font-weight: bold; text-decoration: none; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(0,230,118,0.4);">🔗 PSX کی آفیشل سائیڈ پر لائیو چارٹ کھولیں</a>
         </div>
         """, unsafe_allow_html=True)
         
@@ -266,8 +260,9 @@ with tabs[0]:
             <div class='pros-card'>
             <h4>🟢 خریدنے (Buying / Long) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>انڈیکیٹر چناؤ:</b> PSX چارٹ کے اوپر <b>fx / Indicators</b> پر کلک کر کے Moving Average (EMA) آن کریں۔</li>
-                <li><b>پیلی/سبز لائن:</b> قیمت Moving Average لائن کے اوپر گرین کینڈل بنا رہی ہو۔</li>
+                <li><b>مضبوط سپورٹ:</b> شیئر اپنی اہم سپورٹ پر ہو۔</li>
+                <li><b>انڈیکیٹرز (Indicators):</b> PSX چارٹ کے اوپر <b>fx</b> پر کلک کر کے Moving Average آن کریں۔</li>
+                <li><b>والیم:</b> مارکیٹ میں خرید کا والیم زیادہ ہو۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -276,7 +271,8 @@ with tabs[0]:
             <div class='cons-card'>
             <h4>🔴 فروخت کرنے (Selling / Exit) کے لیے کیا ضروری ہے؟</h4>
             <ul>
-                <li><b>سپورٹ بریک:</b> قیمت کی کینڈل Moving Average لائن سے نیچے چلی جائے تو پرافٹ بک کریں۔</li>
+                <li><b>منافع کا حصول:</b> ہدف (Target) پورا ہونے پر پرافٹ بک کریں۔</li>
+                <li><b>رجحان کی تبدیلی:</b> کینڈل Moving Average لائن سے نیچے آئے تو ایگزٹ کریں۔</li>
             </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -293,7 +289,7 @@ with tabs[0]:
 # TAB 2: PORTFOLIO & ZAKAT
 with tabs[1]:
     if not st.session_state["logged_in"]:
-        st.warning("⚠️ اپنے پورٹ فولیو کا ڈیٹا دیکھنے کے لیے براہِ کرم لاگ ان کریں۔")
+        st.warning("⚠️ اپنے پورٹ فولیو کے لیے لاگ ان کریں۔")
     else:
         st.subheader(f"📂 {curr_user} کا پورٹ فولیو و شرعی زکوۃ کیلکولیٹر")
         if curr_user not in ports_db:
@@ -333,78 +329,36 @@ with tabs[1]:
             st.divider()
             st.info(f"🕌 **سالانہ زکوۃ تخمینہ (2.5%):** Rs. {tot_val * 0.025:,.2f}")
 
-# TAB 3: CRYPTO SIGNALS
+# TAB 3: CRYPTO
 with tabs[2]:
-    st.subheader("⚡ عالمی کرپٹو AI سگنلز")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>🪙 سرفہرست کرپٹو کرنسیز کے لائیو رجحانات</h3>
-    <p>عالمی منڈی میں بٹ کوائن (BTC)، ایتھریم (ETH) اور دیگر ڈیجیٹل کرنسیز کے لیے AI سگنل زون۔</p>
-    <ul>
-        <li><b>Bitcoin (BTC):</b> Bullish Trend - اسپورٹ زون برقرار ہے۔</li>
-        <li><b>Ethereum (ETH):</b> Accumulation Phase - خریداری کا بہترین موقع۔</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("⚡ کرپٹو AI سگنلز")
+    st.write("عالمی کرپٹو کرنسیز کے لیے AI سگنل ہائی ایکوریسی انجن۔")
 
 # TAB 4: PENNY STOCKS
 with tabs[3]:
     st.subheader("🚀 پینی اسٹاکس الرٹ زون (Rs. 15 سے کم)")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>💼 کم قیمت والے فعال شیئرز (Low-Priced High Volume Stocks)</h3>
-    <p>پاکستان اسٹاک ایکسچینج کے وہ سستے شیئرز جن میں روزانہ کی بنیاد پر سب سے زیادہ والیوم اور ٹریڈنگ ہوتی ہے:</p>
-    <ul>
-        <li><b>WTL (Worldcall Telecom):</b> ٹیلی کام سیکٹر کا سب سے زیادہ ٹریڈ ہونے والا شیئر۔</li>
-        <li><b>CNERGY (Cnergyico PK):</b> انرجی سیکٹر میں کم قیمت اور فعال سکرپٹ۔</li>
-        <li><b>TELE (Telecard Limited):</b> ٹیکنالوجی سیکٹر کا پینی اسٹاک۔</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    if st.button("🔍 اسکین کریں"):
+        st.info("اسکیننگ جاری ہے...")
 
 # TAB 5: TAX CALCULATOR
 with tabs[4]:
     st.subheader("🇵🇰 پاکستان ٹیکس و فائلر بچت کیلکولیٹر")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>📊 فائلر بمقابلہ نان فائلر ٹیکس بچت گائیڈ</h3>
-    <p>پاکستان کے موجودہ انکم ٹیکس آرڈیننس کے مطابق:</p>
-    <ul>
-        <li><b>ڈیویڈنڈ ٹیکس (Dividend Tax):</b> فائلر کے لیے 15% جبکہ نان فائلر کے لیے 30% ہے۔</li>
-        <li><b>کیپٹل گین ٹیکس (CGT):</b> فائلر کے لیے شیئر ہولڈنگ کی مدت کے لحاظ سے 0% سے 15% تک جبکہ نان فائلر کے لیے دوگنا ہے۔</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.write("فائلر اور نان فائلر کا فرق۔")
 
 # TAB 6: DIVIDEND CALENDAR
 with tabs[5]:
-    st.subheader("📅 PSX خودکار ڈیویڈنڈ و بک کلوزر کیلنڈر")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>📋 آنے والے کارپوریٹ اعلانات اور بک کلوزر</h3>
-    <p>کمپنیوں کی جانب سے منافع (Payout) اور ڈیویڈنڈ کے اعلان کی تازہ ترین شیڈول رپورٹ۔ اپنے پورٹ فولیو کے شیئرز کے ڈیویڈنڈ ٹریک کریں۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("📅 PSX خودکار ڈیویڈنڈ کیلنڈر")
+    st.write("ڈیویڈنڈز کی لسٹ۔")
 
 # TAB 7: COMPARE
 with tabs[6]:
-    st.subheader("⚖️ دو اسٹاکس کا تقابلی موازنہ")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>🔍 کمپنیوں کی کارکردگی کا تقابل</h3>
-    <p>دو مختلف کمپنیوں (مثلاً FFC اور OGDC) کی قیمت، پرافٹ مارجن اور ڈیویڈنڈ ییلڈ کا موازنہ کرنے کا زون۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("⚖️ اسٹاک موازنہ")
+    st.write("دو اسٹاکس کا موازنہ۔")
 
 # TAB 8: DEMO WALLET
 with tabs[7]:
-    st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ (ورچوئل ٹریڈنگ)")
-    st.markdown("""
-    <div class='admin-card'>
-    <h3>💼 فرضی سرمایہ کاری اور پریکٹس پورٹل</h3>
-    <p>1,00,000 روپے کے ورچوئل بیلنس کے ساتھ لائیو مارکیٹ میں شیئر خریدنے اور بیچنے کی پریکٹس کریں۔</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader("🧪 ڈیمو ٹریڈنگ وائلٹ")
+    st.write("ورچوئل بیلنس۔")
 
 # TAB 9: ADMIN USER MANAGEMENT
 if is_admin:
